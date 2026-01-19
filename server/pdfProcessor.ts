@@ -1,3 +1,6 @@
+import fs from "fs";
+// @ts-ignore
+import pdf from "pdf-parse";
 import { invokeLLM } from "./_core/llm";
 
 export interface ExtractedPaperMetadata {
@@ -18,20 +21,16 @@ export interface IndicatorSuggestion {
 }
 
 /**
- * Extract text from PDF file using shell command
+ * Extract text from PDF file using pdf-parse (pure JS)
  */
 export async function extractTextFromPDF(pdfPath: string): Promise<string> {
-  const { exec } = await import("child_process");
-  const { promisify } = await import("util");
-  const execAsync = promisify(exec);
-
   try {
-    // Use pdftotext (from poppler-utils, pre-installed in sandbox)
-    const { stdout } = await execAsync(`pdftotext "${pdfPath}" -`);
-    return stdout;
+    const dataBuffer = fs.readFileSync(pdfPath);
+    const data = await pdf(dataBuffer);
+    return data.text;
   } catch (error) {
     console.error("PDF text extraction error:", error);
-    throw new Error("PDF metin çıkarma başarısız oldu");
+    throw new Error(`PDF metin çıkarma başarısız oldu: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
