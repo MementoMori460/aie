@@ -6,7 +6,7 @@ export const ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
   semanticScholarApiKey: process.env.SEMANTIC_SCHOLAR_API_KEY ?? "",
   altmetricApiKey: process.env.ALTMETRIC_API_KEY ?? "",
   lensApiKey: process.env.LENS_API_KEY ?? "",
