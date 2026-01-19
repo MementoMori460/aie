@@ -3,7 +3,12 @@ import { createRequire } from "module";
 import { invokeLLM } from "./_core/llm";
 
 const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+const pdfModule = require("pdf-parse");
+const pdf = typeof pdfModule === "function" ? pdfModule : pdfModule.default;
+
+if (typeof pdf !== 'function') {
+  console.error("Failed to load pdf-parse module. Export:", pdfModule);
+}
 
 export interface ExtractedPaperMetadata {
   title: string;
