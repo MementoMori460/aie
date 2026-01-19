@@ -62,7 +62,19 @@ export const appRouter = router({
     // List user's evaluations
     list: protectedProcedure
       .query(async ({ ctx }: { ctx: any }) => {
-        return await db.getUserEvaluations(ctx.user.id);
+        const { role, id } = ctx.user;
+
+        if (role === 'admin' || role === 'board_chair') {
+          return await db.getAllEvaluations();
+        }
+
+        if (role === 'reviewer') {
+          // For now, return assigned evaluations. 
+          // If we want them to also see their own, we'd need to merge lists.
+          return await db.getAssignedEvaluations(id);
+        }
+
+        return await db.getUserEvaluations(id);
       }),
 
     getMany: protectedProcedure

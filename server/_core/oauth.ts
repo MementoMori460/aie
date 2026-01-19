@@ -53,11 +53,16 @@ export function registerOAuthRoutes(app: Express) {
 
   app.get("/api/auth/mock", async (req: Request, res: Response) => {
     try {
+      const role = (req.query.role as string) || "user";
+      const validRoles = ["user", "admin", "reviewer", "board_chair"];
+      const finalRole = validRoles.includes(role) ? role : "user";
+
       const mockUser = {
-        openId: "mock-admin-id",
-        name: "Test User (Developer)",
-        email: "test@example.com",
+        openId: `mock-${finalRole}-id`,
+        name: (req.query.name as string) || `Demo ${finalRole.charAt(0).toUpperCase() + finalRole.slice(1)}`,
+        email: (req.query.email as string) || `${finalRole}@demo.com`,
         loginMethod: "mock",
+        role: finalRole as "user" | "admin" | "reviewer" | "board_chair",
         lastSignedIn: new Date(),
       };
 

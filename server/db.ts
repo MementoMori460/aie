@@ -88,6 +88,19 @@ export async function getUserEvaluations(userId: number) {
   return await db.select().from(evaluations).where(eq(evaluations.userId, userId)).orderBy(desc(evaluations.createdAt));
 }
 
+export async function getAllEvaluations() {
+  return await db.select().from(evaluations).orderBy(desc(evaluations.createdAt));
+}
+
+export async function getAssignedEvaluations(reviewerId: number) {
+  const assignments = await db.select().from(reviewerAssignments).where(eq(reviewerAssignments.reviewerId, reviewerId));
+  const ids = assignments.map(a => a.evaluationId);
+
+  if (ids.length === 0) return [];
+
+  return await db.select().from(evaluations).where(inArray(evaluations.id, ids)).orderBy(desc(evaluations.createdAt));
+}
+
 export async function getEvaluationsByIds(ids: number[]) {
   if (ids.length === 0) return [];
   return await db.select().from(evaluations).where(inArray(evaluations.id, ids));

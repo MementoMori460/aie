@@ -5,6 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
 import { FileText, Plus, BarChart3, BookOpen, Calculator, List } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -35,11 +43,77 @@ export default function Home() {
                   Giriş Yap ve Başla
                 </a>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <a href="/api/auth/mock">
-                  Test Sürümü ile Başla
-                </a>
-              </Button>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="lg" variant="outline">
+                    Test Sürümü (Demo)
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Kullanıcı Rolü Seçin</DialogTitle>
+                    <DialogDescription>
+                      Sistemi farklı kullanıcı rollerinde test etmek için aşağıdan seçim yapın.
+                      Her rol için otomatik olarak dummy veri oluşturulacaktır.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                    {/* Researcher */}
+                    <a href="/api/auth/mock?role=user&name=Demo Araştırmacı" className="block">
+                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
+                        <CardHeader>
+                          <div className="text-3xl mb-2">👨‍🎓</div>
+                          <CardTitle className="text-lg">Araştırmacı</CardTitle>
+                          <CardDescription>
+                            Kendi makalelerinizi değerlendirin ve raporlayın.
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </a>
+
+                    {/* Reviewer */}
+                    <a href="/api/auth/mock?role=reviewer&name=Demo Hakem" className="block">
+                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
+                        <CardHeader>
+                          <div className="text-3xl mb-2">👀</div>
+                          <CardTitle className="text-lg">Hakem</CardTitle>
+                          <CardDescription>
+                            Size atanan makaleleri inceleyin ve puanlayın.
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </a>
+
+                    {/* Board Chair */}
+                    <a href="/api/auth/mock?role=board_chair&name=Demo Kurul Başkanı" className="block">
+                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
+                        <CardHeader>
+                          <div className="text-3xl mb-2">⚖️</div>
+                          <CardTitle className="text-lg">Kurul Başkanı</CardTitle>
+                          <CardDescription>
+                            Hakem kararlarını yönetin ve konsensüs sağlayın.
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </a>
+
+                    {/* Admin */}
+                    <a href="/api/auth/mock?role=admin&name=Demo Yönetici" className="block">
+                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
+                        <CardHeader>
+                          <div className="text-3xl mb-2">🛠️</div>
+                          <CardTitle className="text-lg">Sistem Yöneticisi</CardTitle>
+                          <CardDescription>
+                            Kullanıcıları, ayarları ve tüm sistemi yönetin.
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </a>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -213,30 +287,77 @@ export default function Home() {
         </div>
 
         {/* Quick Actions */}
+        {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Link href="/new">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <Plus className="w-8 h-8 mb-2 text-primary" />
-                <CardTitle>Yeni Değerlendirme Başlat</CardTitle>
-                <CardDescription>
-                  Bir akademik makalenin etkisini değerlendirmeye başlayın
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+          {(user?.role === "user" || user?.role === "admin" || !user?.role) && (
+            <>
+              <Link href="/new">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <CardHeader>
+                    <Plus className="w-8 h-8 mb-2 text-primary" />
+                    <CardTitle>Yeni Değerlendirme Başlat</CardTitle>
+                    <CardDescription>
+                      Bir akademik makalenin etkisini değerlendirmeye başlayın
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
 
-          <Link href="/evaluations">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <FileText className="w-8 h-8 mb-2 text-primary" />
-                <CardTitle>Değerlendirme Geçmişi</CardTitle>
-                <CardDescription>
-                  Tamamlanmış ve devam eden değerlendirmelerinizi görüntüleyin
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+              <Link href="/evaluations">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <CardHeader>
+                    <FileText className="w-8 h-8 mb-2 text-primary" />
+                    <CardTitle>Değerlendirme Geçmişi</CardTitle>
+                    <CardDescription>
+                      Tamamlanmış ve devam eden değerlendirmelerinizi görüntüleyin
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            </>
+          )}
+
+          {user?.role === "reviewer" && (
+            <Link href="/reviewer">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full border-primary/20">
+                <CardHeader>
+                  <div className="w-8 h-8 mb-2 text-primary text-3xl">👀</div>
+                  <CardTitle>Hakem Paneli</CardTitle>
+                  <CardDescription>
+                    Size atanan makaleleri inceleyin ve puanlayın.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+
+          {user?.role === "board_chair" && (
+            <Link href="/consensus">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full border-primary/20">
+                <CardHeader>
+                  <div className="w-8 h-8 mb-2 text-primary text-3xl">⚖️</div>
+                  <CardTitle>Uzlaşma (Consensus) Paneli</CardTitle>
+                  <CardDescription>
+                    Hakem değerlendirmelerini inceleyin ve nihai kararı verin.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+
+          {user?.role === "admin" && (
+            <Link href="/evaluations">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full bg-slate-50 border-slate-200">
+                <CardHeader>
+                  <div className="w-8 h-8 mb-2 text-primary text-3xl">🛠️</div>
+                  <CardTitle>Yönetici Kontrol Paneli</CardTitle>
+                  <CardDescription>
+                    Sistemdeki tüm değerlendirmeleri ve kullanıcıları yönetin.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
         </div>
 
         {/* Info Section */}
