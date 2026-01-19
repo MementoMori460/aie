@@ -70,22 +70,21 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
     setExtractionStatus("uploading");
 
     try {
-      // Read file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = new Uint8Array(arrayBuffer);
+      // Convert to Base64 using FileReader to avoid stack overflow
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove "data:application/pdf;base64," prefix or similar
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      // Upload to S3
-      const timestamp = Date.now();
-      const randomSuffix = Math.random().toString(36).substring(7);
-      const fileKey = `pdf-uploads/${timestamp}-${randomSuffix}.pdf`;
-      
-      // Note: storagePut is a server-side function
-      // We need to create a tRPC endpoint for file upload
-      // For now, we'll use a workaround with base64
-      const base64 = btoa(String.fromCharCode.apply(null, Array.from(buffer)));
-      
       toast.info("PDF yükleniyor...");
-      
+
       // Upload PDF
       const uploadResult = await uploadMutation.mutateAsync({
         base64Data: base64,
@@ -102,7 +101,7 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
 
       setExtractionStatus("success");
       toast.success("Makale bilgileri başarıyla çıkarıldı!");
-      
+
       onMetadataExtracted({
         paperTitle: metadata.title,
         paperAuthors: metadata.authors,
@@ -160,18 +159,17 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
       </CardHeader>
       <CardContent>
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            isDragging
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging
               ? "border-primary bg-primary/5"
               : "border-muted-foreground/25 hover:border-primary/50"
-          }`}
+            }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
           <div className="flex flex-col items-center gap-4">
             {getStatusIcon()}
-            
+
             <div>
               <p className="text-sm font-medium">{getStatusText()}</p>
               {extractionStatus === "idle" && (
@@ -226,7 +224,7 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
         {extractionStatus === "success" && (
           <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-sm text-green-800 dark:text-green-200">
-              ✓ Makale bilgileri başarıyla çıkarıldı ve form alanları dolduruldu. 
+              ✓ Makale bilgileri başarıyla çıkarıldı ve form alanları dolduruldu.
               Lütfen bilgileri kontrol edin ve gerekirse düzeltin.
             </p>
           </div>
