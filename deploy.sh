@@ -17,5 +17,8 @@ npm run db:push
 echo "🏗️  Building project..."
 npm run build
 
+echo "🔄 Restarting server..."
+pm2 restart all || true
+
 echo "✅ Deployment preparation complete!"
 echo "👉 Now go to aaPanel Node Manager and click 'Restart' on your project."
