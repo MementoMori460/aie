@@ -30,8 +30,8 @@ export interface DemoData {
 }
 
 export const DEMO_CONTENT: DemoData = {
-  title: "Örnek Makale Değerlendirmesi",
-  subtitle: "\"Yapay Zeka Etikleri Üzerine Bir Çalışma\" makalesinin adım adım değerlendirmesi",
+  title: "Sistem Tanıtımı",
+  subtitle: "Akademik Makale Etki Değerlendirmesi Sistemi Nasıl Kullanılır?",
   totalDuration: 5,
   steps: [
     {
@@ -301,6 +301,12 @@ export const DEMO_CONTENT: DemoData = {
         "Paylaşım linki, raporunuzu başkalarıyla paylaşmanızı sağlar"
       ],
       duration: 40
+    },
+    {
+      id: 11,
+      title: "Demo Tamamlandı! 🎉",
+      description: "Artık kendi makalenizi değerlendirmeye başlayabilirsiniz.",
+      duration: 0
     }
   ]
 };

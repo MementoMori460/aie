@@ -134,8 +134,8 @@ export function InteractiveDemo() {
           </div>
 
           {/* Step Content */}
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-[600px]">
+            <CardHeader className="flex-none">
               <CardTitle className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
                   {step.id}
@@ -145,76 +145,112 @@ export function InteractiveDemo() {
               <CardDescription>{step.description}</CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-6">
-              {/* Visual Content */}
-              {step.visual && (
-                <div className="bg-muted/30 rounded-lg p-6 flex items-center justify-center min-h-[300px]">
-                  {step.visual.type === 'image' && (
-                    <div className="text-center space-y-2">
-                      <div className="text-6xl">📊</div>
-                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                    </div>
-                  )}
-                  {step.visual.type === 'animation' && (
-                    <div className="text-center space-y-2">
-                      <div className="text-6xl animate-pulse">🤖</div>
-                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                    </div>
-                  )}
-                  {step.visual.type === 'chart' && (
-                    <div className="text-center space-y-2">
-                      <div className="text-6xl">📈</div>
-                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                    </div>
-                  )}
-                  {step.visual.type === 'code' && (
-                    <div className="text-center space-y-2">
-                      <div className="text-6xl">💻</div>
-                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Actions */}
-              {step.actions && step.actions.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Bu Adımda Yapabilecekleriniz:</h4>
-                  <div className="grid gap-3">
-                    {step.actions.map((action: { label: string; description: string }, index: number) => (
-                      <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
-                          {index + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{action.label}</p>
-                          <p className="text-sm text-muted-foreground">{action.description}</p>
-                        </div>
-                      </div>
-                    ))}
+            <CardContent className="flex-1 overflow-y-auto space-y-6">
+              {currentStep === demoData.steps.length - 1 ? (
+                // Final "Completed" Slide Content
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-8 p-6">
+                  <div className="text-8xl animate-bounce">🎉</div>
+                  <div className="space-y-4 max-w-md">
+                    <h3 className="text-2xl font-bold">Harika İş!</h3>
+                    <p className="text-muted-foreground text-lg">
+                      Sistemin temel özelliklerini keşfettiniz. Artık gerçek bir değerlendirme yapmaya hazırsınız.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm justify-center pt-4">
+                    <Button
+                      onClick={() => {
+                        setIsOpen(false);
+                        window.location.href = '/new';
+                      }}
+                      size="lg"
+                      className="w-full"
+                    >
+                      Yeni Değerlendirme Başlat
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      size="lg"
+                      className="w-full"
+                    >
+                      Demo'yu Tekrar İzle
+                    </Button>
                   </div>
                 </div>
-              )}
+              ) : (
+                // Standard Slide Content
+                <>
+                  {/* Visual Content */}
+                  {step.visual && (
+                    <div className="bg-muted/30 rounded-lg p-6 flex items-center justify-center min-h-[300px]">
+                      {step.visual.type === 'image' && (
+                        <div className="text-center space-y-2">
+                          <div className="text-6xl">📊</div>
+                          <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                        </div>
+                      )}
+                      {step.visual.type === 'animation' && (
+                        <div className="text-center space-y-2">
+                          <div className="text-6xl animate-pulse">🤖</div>
+                          <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                        </div>
+                      )}
+                      {step.visual.type === 'chart' && (
+                        <div className="text-center space-y-2">
+                          <div className="text-6xl">📈</div>
+                          <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                        </div>
+                      )}
+                      {step.visual.type === 'code' && (
+                        <div className="text-center space-y-2">
+                          <div className="text-6xl">💻</div>
+                          <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-              {/* Tips */}
-              {step.tips && step.tips.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <span>💡</span> İpuçları
-                  </h4>
-                  <ul className="space-y-2">
-                    {step.tips.map((tip: string, index: number) => (
-                      <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <span className="text-primary mt-0.5">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  {/* Actions */}
+                  {step.actions && step.actions.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Bu Adımda Yapabilecekleriniz:</h4>
+                      <div className="grid gap-3">
+                        {step.actions.map((action: { label: string; description: string }, index: number) => (
+                          <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{action.label}</p>
+                              <p className="text-sm text-muted-foreground">{action.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tips */}
+                  {step.tips && step.tips.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm flex items-center gap-2">
+                        <span>💡</span> İpuçları
+                      </h4>
+                      <ul className="space-y-2">
+                        {step.tips.map((tip: string, index: number) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <span className="text-primary mt-0.5">•</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
 
-            <CardFooter className="flex flex-col gap-4 border-t pt-6">
+            <CardFooter className="flex flex-col gap-4 border-t pt-6 flex-none">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
                 <Button
                   variant="outline"
@@ -230,7 +266,7 @@ export function InteractiveDemo() {
                   variant="outline"
                   size="sm"
                   onClick={handleNext}
-                  disabled={currentStep === demoData.steps.length - 1}
+                  disabled={currentStep === demoData.steps.length - 1} // Disable next if checking directly, but since we have a special slide, allow navigating to it if not last. Wait, if logic handles standard slides, the last slide is now "Completed". So we want to disable NEXT when we are ON the completed slide.
                   className="w-full"
                 >
 
@@ -250,6 +286,7 @@ export function InteractiveDemo() {
                   size="sm"
                   onClick={handlePlayPause}
                   className="w-full"
+                  disabled={currentStep === demoData.steps.length - 1} // Disable play on final slide
                 >
                   {isPlaying ? (
                     <>
@@ -266,31 +303,6 @@ export function InteractiveDemo() {
               </div>
             </CardFooter>
           </Card>
-
-          {/* Final Step CTA */}
-          {currentStep === demoData.steps.length - 1 && (
-            <Card className="border-primary/50 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <h3 className="font-semibold text-lg">Demo Tamamlandı! 🎉</h3>
-                  <p className="text-muted-foreground">
-                    Artık kendi makalenizi değerlendirmeye başlayabilirsiniz.
-                  </p>
-                  <div className="flex items-center justify-center gap-3">
-                    <Button onClick={() => {
-                      setIsOpen(false);
-                      window.location.href = '/new';
-                    }}>
-                      Yeni Değerlendirme Başlat
-                    </Button>
-                    <Button variant="outline" onClick={handleReset}>
-                      Demo'yu Tekrar İzle
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </DialogContent>
       </Dialog>
     </>
