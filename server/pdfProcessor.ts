@@ -1,7 +1,9 @@
 import fs from "fs";
-// @ts-ignore
-import pdf from "pdf-parse";
+import { createRequire } from "module";
 import { invokeLLM } from "./_core/llm";
+
+const require = createRequire(import.meta.url);
+const pdf = require("pdf-parse");
 
 export interface ExtractedPaperMetadata {
   title: string;
