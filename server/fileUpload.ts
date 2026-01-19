@@ -26,8 +26,15 @@ export async function uploadPdfFromBase64(base64Data: string, filename: string):
     const localPath = join(tmpdir(), `${timestamp}-${randomSuffix}-${filename}`);
     writeFileSync(localPath, buffer);
 
-    // Upload to S3
-    const { url } = await storagePut(fileKey, buffer, "application/pdf");
+    // Upload to S3 (Optional - fail gracefully for local/self-hosted envs)
+    let url = "";
+    try {
+      const result = await storagePut(fileKey, buffer, "application/pdf");
+      url = result.url;
+    } catch (s3Error) {
+      console.warn("S3 Upload failed (likely missing credentials), continuing with local file only:", s3Error);
+      // We continue because we have the local file for processing
+    }
 
     return {
       fileKey,
