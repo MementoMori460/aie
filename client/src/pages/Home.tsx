@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
-import { FileText, Plus, BarChart3, BookOpen, Calculator, List } from "lucide-react";
+import { FileText, Plus, BarChart3, BookOpen, Calculator, List, LogOut } from "lucide-react";
 
 
 export default function Home() {
@@ -181,12 +181,18 @@ export default function Home() {
               Yeni bir değerlendirme başlatın veya mevcut değerlendirmelerinizi görüntüleyin
             </p>
           </div>
-          <Button size="lg" asChild>
-            <Link href="/new">
-              <Plus className="w-5 h-5 mr-2" />
-              Yeni Değerlendirme
-            </Link>
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => window.location.href = '/api/auth/logout'}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Çıkış Yap
+            </Button>
+            <Button size="lg" asChild>
+              <Link href="/new">
+                <Plus className="w-5 h-5 mr-2" />
+                Yeni Değerlendirme
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Interactive Demo Section */}
@@ -208,7 +214,6 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {(user?.role === "user" || user?.role === "admin" || !user?.role) && (
@@ -283,43 +288,115 @@ export default function Home() {
         </div>
 
         {/* Info Section */}
-        <Card>
+        <div className="mb-12">
+          <Card>
+            <CardHeader>
+              <CardTitle>Değerlendirme Süreci</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="text-center p-4 rounded-lg bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
+                    1
+                  </div>
+                  <h4 className="font-semibold mb-1">Makale Bilgileri</h4>
+                  <p className="text-sm text-muted-foreground">Temel bilgileri girin</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
+                    2
+                  </div>
+                  <h4 className="font-semibold mb-1">Göstergeleri Doldurun</h4>
+                  <p className="text-sm text-muted-foreground">33 gösterge için veri girin</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
+                    3
+                  </div>
+                  <h4 className="font-semibold mb-1">Otomatik Hesaplama</h4>
+                  <p className="text-sm text-muted-foreground">Puanlar otomatik hesaplanır</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
+                    4
+                  </div>
+                  <h4 className="font-semibold mb-1">Rapor Alın</h4>
+                  <p className="text-sm text-muted-foreground">Detaylı rapor oluşturun</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Feature Links (Restored for Authenticated Users) */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
+          <Link href="/documentation">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <BookOpen className="w-12 h-12 mb-4 text-primary" />
+                <CardTitle>Dokümantasyon</CardTitle>
+                <CardDescription>
+                  Sistem mimarisi, formüller ve hesaplama kılavuzları
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/methodology">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <Calculator className="w-12 h-12 mb-4 text-primary" />
+                <CardTitle>Metodoloji</CardTitle>
+                <CardDescription>
+                  Sistemin çalışma prensibi ve hesaplama süreci
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/indicators">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <List className="w-12 h-12 mb-4 text-primary" />
+                <CardTitle>Gösterge Listesi</CardTitle>
+                <CardDescription>
+                  33 göstergenin detaylı açıklamaları
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        </div>
+
+        {/* HIM Model Info (Restored for Authenticated Users) */}
+        <Card className="bg-muted/50 mb-12">
           <CardHeader>
-            <CardTitle>Değerlendirme Süreci</CardTitle>
+            <CardTitle>Bütünsel Etki Modeli (HIM)</CardTitle>
+            <CardDescription>
+              Reed et al. (2021) ve Morton (2015) araştırma çerçevelerine dayalı bilimsel metodoloji
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
-                  1
-                </div>
-                <h4 className="font-semibold mb-1">Makale Bilgileri</h4>
-                <p className="text-sm text-muted-foreground">Temel bilgileri girin</p>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">4 Ana Boyut</h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li>• Akademik Etki (35%)</li>
+                  <li>• Toplumsal ve Pratik Etki (40%)</li>
+                  <li>• Negatif Etki ve Risk (15%)</li>
+                  <li>• Etik ve Sorumluluk (10%)</li>
+                </ul>
               </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
-                  2
-                </div>
-                <h4 className="font-semibold mb-1">Göstergeleri Doldurun</h4>
-                <p className="text-sm text-muted-foreground">33 gösterge için veri girin</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
-                  3
-                </div>
-                <h4 className="font-semibold mb-1">Otomatik Hesaplama</h4>
-                <p className="text-sm text-muted-foreground">Puanlar otomatik hesaplanır</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2 font-bold">
-                  4
-                </div>
-                <h4 className="font-semibold mb-1">Rapor Alın</h4>
-                <p className="text-sm text-muted-foreground">Detaylı rapor oluşturun</p>
+              <div>
+                <h4 className="font-semibold mb-2">Özellikler</h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li>• Ölçülebilen ve ölçülemeyen etkiler</li>
+                  <li>• Negatif etki ve başarısızlık analizi</li>
+                  <li>• Etik standartlar ve şeffaflık</li>
+                  <li>• Bütünsel Etki Skoru (HIS)</li>
+                </ul>
               </div>
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

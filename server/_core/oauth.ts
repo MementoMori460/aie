@@ -160,4 +160,9 @@ export function registerOAuthRoutes(app: Express) {
       res.status(500).json({ error: "Login failed system error" });
     }
   });
+
+  app.get("/api/auth/logout", (_req, res) => {
+    res.clearCookie(COOKIE_NAME);
+    res.redirect("/");
+  });
 }
