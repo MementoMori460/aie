@@ -149,12 +149,11 @@ export function InteractiveDemo() {
             <CardContent className="flex-1 overflow-y-auto space-y-6">
               {currentStep === demoData.steps.length - 1 ? (
                 // Final "Completed" Slide Content
-                <div className="flex flex-col items-center justify-center h-full text-center space-y-8 p-6">
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4 p-6">
                   <div className="text-8xl animate-bounce">🎉</div>
-                  <div className="space-y-4 max-w-md">
-                    <h3 className="text-2xl font-bold">Harika İş!</h3>
+                  <div className="space-y-2 max-w-md">
                     <p className="text-muted-foreground text-lg">
-                      Sistemin temel özelliklerini keşfettiniz. Artık gerçek bir değerlendirme yapmaya hazırsınız.
+                      Artık kendi makalenizi değerlendirmeye başlayabilirsiniz.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm justify-center pt-4">
