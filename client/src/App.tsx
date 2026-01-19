@@ -18,9 +18,12 @@ import ReviewPage from "./pages/ReviewPage";
 import ConsensusDashboard from "./pages/ConsensusDashboard";
 import ComparisonDashboard from "./pages/ComparisonDashboard";
 
+import Login from "./pages/Login";
+
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path={"/"} component={Home} />
       <Route path="/documentation" component={Documentation} />
       <Route path="/methodology" component={Methodology} />

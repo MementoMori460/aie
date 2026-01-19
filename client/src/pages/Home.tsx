@@ -5,14 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
 import { FileText, Plus, BarChart3, BookOpen, Calculator, List } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -39,81 +32,10 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" asChild>
-                <a href={getLoginUrl()}>
-                  Giriş Yap ve Başla
-                </a>
+                <Link href="/login">
+                  Giriş Yap
+                </Link>
               </Button>
-
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="lg" variant="outline">
-                    Test Sürümü (Demo)
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Kullanıcı Rolü Seçin</DialogTitle>
-                    <DialogDescription>
-                      Sistemi farklı kullanıcı rollerinde test etmek için aşağıdan seçim yapın.
-                      Her rol için otomatik olarak dummy veri oluşturulacaktır.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                    {/* Researcher */}
-                    <a href="/api/auth/mock?role=user&name=Demo Araştırmacı" className="block">
-                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
-                        <CardHeader>
-                          <div className="text-3xl mb-2">👨‍🎓</div>
-                          <CardTitle className="text-lg">Araştırmacı</CardTitle>
-                          <CardDescription>
-                            Kendi makalelerinizi değerlendirin ve raporlayın.
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </a>
-
-                    {/* Reviewer */}
-                    <a href="/api/auth/mock?role=reviewer&name=Demo Hakem" className="block">
-                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
-                        <CardHeader>
-                          <div className="text-3xl mb-2">👀</div>
-                          <CardTitle className="text-lg">Hakem</CardTitle>
-                          <CardDescription>
-                            Size atanan makaleleri inceleyin ve puanlayın.
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </a>
-
-                    {/* Board Chair */}
-                    <a href="/api/auth/mock?role=board_chair&name=Demo Kurul Başkanı" className="block">
-                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
-                        <CardHeader>
-                          <div className="text-3xl mb-2">⚖️</div>
-                          <CardTitle className="text-lg">Kurul Başkanı</CardTitle>
-                          <CardDescription>
-                            Hakem kararlarını yönetin ve konsensüs sağlayın.
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </a>
-
-                    {/* Admin */}
-                    <a href="/api/auth/mock?role=admin&name=Demo Yönetici" className="block">
-                      <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer border-2 hover:border-primary/50">
-                        <CardHeader>
-                          <div className="text-3xl mb-2">🛠️</div>
-                          <CardTitle className="text-lg">Sistem Yöneticisi</CardTitle>
-                          <CardDescription>
-                            Kullanıcıları, ayarları ve tüm sistemi yönetin.
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </a>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
 
