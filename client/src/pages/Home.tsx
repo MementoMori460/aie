@@ -29,11 +29,18 @@ export default function Home() {
             <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
               Akademik makalelerin etkisini bütünsel olarak değerlendirin. İki mod: Hızlı (37 gösterge, 4 boyut) veya Kapsamlı (193 gösterge, 16 boyut, zincirleme etkiler).
             </p>
-            <Button size="lg" asChild>
-              <a href={getLoginUrl()}>
-                Giriş Yap ve Başla
-              </a>
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button size="lg" asChild>
+                <a href={getLoginUrl()}>
+                  Giriş Yap ve Başla
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <a href="/api/auth/mock">
+                  Test Sürümü ile Başla
+                </a>
+              </Button>
+            </div>
           </div>
 
           {/* Interactive Demo Section */}

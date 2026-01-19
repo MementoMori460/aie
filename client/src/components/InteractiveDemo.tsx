@@ -11,14 +11,31 @@ export function InteractiveDemo() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+  const [timeLeft, setTimeLeft] = useState(0);
+
   const demoData = DEMO_CONTENT;
   const step = demoData.steps[currentStep];
-  const progress = ((currentStep + 1) / demoData.steps.length) * 100;
+
+  // Total demo progress (steps completed)
+  const totalProgress = ((currentStep) / demoData.steps.length) * 100;
+
+  // Current step progress (time remaining)
+  const currentStepProgress = isPlaying && step?.duration
+    ? ((step.duration - timeLeft) / step.duration) * 100
+    : 0;
+
+  // Initialize timeLeft when step changes
+  useEffect(() => {
+    if (step) {
+      setTimeLeft(step.duration || 30);
+    }
+  }, [currentStep, step]);
 
   const handleNext = () => {
     if (currentStep < demoData.steps.length - 1) {
       setCurrentStep(currentStep + 1);
+    } else {
+      setIsPlaying(false);
     }
   };
 
@@ -31,33 +48,38 @@ export function InteractiveDemo() {
   const handleReset = () => {
     setCurrentStep(0);
     setIsPlaying(false);
+    if (demoData.steps[0]) {
+      setTimeLeft(demoData.steps[0].duration || 30);
+    }
   };
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
 
-  // Auto-play functionality
+  // Auto-play functionality with 1s interval for countdown
   useEffect(() => {
-    if (isPlaying) {
-      const timer = setTimeout(() => {
-        if (currentStep < demoData.steps.length - 1) {
-          setCurrentStep(currentStep + 1);
-        } else {
-          setIsPlaying(false);
-        }
-      }, (step?.duration || 30) * 1000);
+    let interval: NodeJS.Timeout;
 
-      return () => clearTimeout(timer);
+    if (isPlaying && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (isPlaying && timeLeft === 0) {
+      handleNext();
     }
-  }, [isPlaying, currentStep, demoData.steps.length, step?.duration]);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, timeLeft]);
 
   if (!step) return null;
 
   return (
     <>
       {/* Demo Başlatma Butonu */}
-      <Button 
+      <Button
         onClick={() => setIsOpen(true)}
         size="lg"
         className="w-full sm:w-auto"
@@ -72,24 +94,43 @@ export function InteractiveDemo() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{demoData.title}</DialogTitle>
-              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
             </div>
             <p className="text-sm text-muted-foreground">{demoData.subtitle}</p>
           </DialogHeader>
 
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Adım {currentStep + 1} / {demoData.steps.length}
-              </span>
-              <Badge variant="outline">
-                ~{step.duration || 30} saniye
-              </Badge>
+          {/* Progress Section */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground font-medium"> Toplam İlerleme </span>
+                <span className="text-muted-foreground">
+                  Adım {currentStep + 1} / {demoData.steps.length}
+                </span>
+              </div>
+              <Progress value={totalProgress} className="h-2" />
             </div>
-            <Progress value={progress} />
+
+            {isPlaying && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-primary font-medium flex items-center gap-1">
+                    <Play className="w-3 h-3 fill-current" /> Otomatik İlerliyor...
+                  </span>
+                  <Badge variant="secondary" className="font-mono">
+                    Kalan: {timeLeft} sn
+                  </Badge>
+                </div>
+                <Progress value={currentStepProgress} className="h-1 bg-primary/20" />
+              </div>
+            )}
+
+            {!isPlaying && (
+              <div className="flex items-center justify-end">
+                <Badge variant="outline">
+                  Tahmini: {step.duration || 30} sn
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Step Content */}
@@ -106,32 +147,34 @@ export function InteractiveDemo() {
 
             <CardContent className="space-y-6">
               {/* Visual Content */}
-              <div className="bg-muted/30 rounded-lg p-6 flex items-center justify-center min-h-[300px]">
-                {step.visual.type === 'image' && (
-                  <div className="text-center space-y-2">
-                    <div className="text-6xl">📊</div>
-                    <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                  </div>
-                )}
-                {step.visual.type === 'animation' && (
-                  <div className="text-center space-y-2">
-                    <div className="text-6xl animate-pulse">🤖</div>
-                    <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                  </div>
-                )}
-                {step.visual.type === 'chart' && (
-                  <div className="text-center space-y-2">
-                    <div className="text-6xl">📈</div>
-                    <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                  </div>
-                )}
-                {step.visual.type === 'code' && (
-                  <div className="text-center space-y-2">
-                    <div className="text-6xl">💻</div>
-                    <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
-                  </div>
-                )}
-              </div>
+              {step.visual && (
+                <div className="bg-muted/30 rounded-lg p-6 flex items-center justify-center min-h-[300px]">
+                  {step.visual.type === 'image' && (
+                    <div className="text-center space-y-2">
+                      <div className="text-6xl">📊</div>
+                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                    </div>
+                  )}
+                  {step.visual.type === 'animation' && (
+                    <div className="text-center space-y-2">
+                      <div className="text-6xl animate-pulse">🤖</div>
+                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                    </div>
+                  )}
+                  {step.visual.type === 'chart' && (
+                    <div className="text-center space-y-2">
+                      <div className="text-6xl">📈</div>
+                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                    </div>
+                  )}
+                  {step.visual.type === 'code' && (
+                    <div className="text-center space-y-2">
+                      <div className="text-6xl">💻</div>
+                      <p className="text-sm text-muted-foreground">{step.visual.caption}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               {step.actions && step.actions.length > 0 && (
@@ -171,53 +214,52 @@ export function InteractiveDemo() {
               )}
             </CardContent>
 
-            <CardFooter className="flex items-center justify-between border-t pt-6">
-              {/* Navigation Controls */}
-              <div className="flex items-center gap-2">
+            <CardFooter className="flex flex-col gap-4 border-t pt-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handlePrevious}
                   disabled={currentStep === 0}
+                  className="w-full"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
-                  Önceki
+
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleNext}
                   disabled={currentStep === demoData.steps.length - 1}
+                  className="w-full"
                 >
-                  Sonraki
+
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
-              </div>
-
-              {/* Playback Controls */}
-              <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={handleReset}
+                  className="w-full"
                 >
                   <RotateCcw className="w-4 h-4 mr-1" />
-                  Başa Dön
+
                 </Button>
                 <Button
-                  variant="default"
+                  variant={isPlaying ? "destructive" : "default"}
                   size="sm"
                   onClick={handlePlayPause}
+                  className="w-full"
                 >
                   {isPlaying ? (
                     <>
                       <Pause className="w-4 h-4 mr-1" />
-                      Duraklat
+
                     </>
                   ) : (
                     <>
                       <Play className="w-4 h-4 mr-1" />
-                      Otomatik İlerle
+
                     </>
                   )}
                 </Button>

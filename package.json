@@ -13,7 +13,9 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "overrides": {
-    "@builder.io/vite-plugin-jsx-loc>vite": "^7.1.7"
+    "@builder.io/vite-plugin-jsx-loc": {
+      "vite": "^7.1.7"
+    }
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -50,6 +52,7 @@
     "@trpc/react-query": "^11.6.0",
     "@trpc/server": "^11.6.0",
     "axios": "^1.12.0",
+    "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -63,7 +66,6 @@
     "input-otp": "^1.4.2",
     "jose": "6.1.0",
     "lucide-react": "^0.453.0",
-    "mysql2": "^3.15.0",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
     "react": "^19.2.1",

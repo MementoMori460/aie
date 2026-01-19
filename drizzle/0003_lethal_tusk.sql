@@ -1,1 +1,0 @@
-ALTER TABLE `evaluations` ADD `evaluationMode` enum('quick','comprehensive') DEFAULT 'quick' NOT NULL;

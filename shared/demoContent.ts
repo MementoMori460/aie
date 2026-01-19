@@ -9,7 +9,7 @@ export interface DemoStep {
   id: number;
   title: string;
   description: string;
-  visual: {
+  visual?: {
     type: 'image' | 'animation' | 'code' | 'chart';
     content: string;
     caption?: string;
@@ -38,11 +38,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 1,
       title: "Değerlendirme Modu Seçimi",
       description: "İlk adımda, değerlendirme modunu seçiyorsunuz. Hızlı Mod (37 gösterge, 4 boyut) veya Kapsamlı Mod (193 gösterge, 16 boyut, zincirleme etkiler) arasından birini seçin.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '📊 Mod Seçimi\n\n🔹 Hızlı Mod\n  • 37 gösterge\n  • 4 ana boyut\n  • 15-30 dakika\n  • Temel akademik etki\n\n🔹 Kapsamlı Mod\n  • 193 gösterge\n  • 16 ana boyut\n  • 45-60 dakika\n  • Zincirleme etkiler\n  • AI otomatik doldurma',
         caption: 'İki mod arasından seçim yapın'
-      },
+      }, */
       actions: [
         {
           label: "Hızlı Mod",
@@ -64,11 +64,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 2,
       title: "Makale Bilgilerini Girme",
       description: "Değerlendirmek istediğiniz makalenin temel bilgilerini giriyorsunuz. PDF yükleyerek bu süreci otomatikleştirebilirsiniz.",
-      visual: {
+      /* visual: {
         type: 'image',
         content: '/demo/step2-paper-info.png',
         caption: 'Makale bilgileri formu'
-      },
+      }, */
       actions: [
         {
           label: "Manuel Giriş",
@@ -90,11 +90,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 3,
       title: "Göstergeleri Doldurma",
       description: "Seçtiğiniz moda göre göstergeleri dolduruyorsunuz. Hızlı Mod'da 37 gösterge, Kapsamlı Mod'da 193 gösterge bulunur. Her gösterge için 0-100 arası puan veriyorsunuz.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '📝 Gösterge Doldurma\n\nD1: Akademik Etki (11)\nD2: Toplumsal Etki (11)\nD3: Negatif Etki (9)\nD4: Etik (6)\n\n[Kapsamlı Mod]\nD5: Ekonomik (15)\nD6: Sağlık (12)\nD7: Çevresel (14)\nD8: Politik (10)\n...ve 8 boyut daha',
         caption: 'Boyutlar ve gösterge sayıları'
-      },
+      }, */
       actions: [
         {
           label: "Manuel Değerlendirme",
@@ -116,11 +116,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 4,
       title: "Otomatik Hesaplama",
       description: "Sistem, girdiğiniz puanları kullanarak boyut skorlarını ve Holistic Impact Score (HIS) hesaplar. Kapsamlı Mod'da zincirleme etkiler ve çarpan katsayıları da hesaplanır.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '🧮 Hesaplama Süreci\n\n1️⃣ Gösterge puanları → Boyut skorları\n2️⃣ Boyut skorları → HIS\n3️⃣ [Kapsamlı] Zincirleme etkiler\n4️⃣ [Kapsamlı] Çarpan katsayıları\n5️⃣ [Kapsamlı] Ağ etkileri\n\nSonuç: 0-100 arası final skor',
         caption: 'Otomatik hesaplama adımları'
-      },
+      }, */
       actions: [
         {
           label: "Ağırlıklandırma",
@@ -142,11 +142,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 5,
       title: "Detaylı Rapor Görüntüleme",
       description: "Değerlendirme tamamlandıktan sonra, detaylı raporu görüntüleyebilirsiniz. Rapor, tüm boyut skorlarını, gösterge detaylarını ve zincirleme etki analizini içerir.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '📊 Rapor İçeriği\n\n• Genel Skor (HIS)\n• Boyut Skorları (Radar Chart)\n• Gösterge Detayları\n• Güçlü/Zayıf Yönler\n• [Kapsamlı] Zincirleme Etkiler\n• [Kapsamlı] Çarpan Katsayıları\n• [Kapsamlı] Ağ Etkileri\n• Öneriler',
         caption: 'Detaylı rapor bileşenleri'
-      },
+      }, */
       actions: [
         {
           label: "PDF Export",
@@ -172,11 +172,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 6,
       title: "Karşılaştırma ve İzleme",
       description: "Birden fazla makaleyi karşılaştırabilir ve zaman içinde etkilerini izleyebilirsiniz. Dashboard, tüm değerlendirmelerinizi bir arada gösterir.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '📈 Dashboard\n\n• Tüm Değerlendirmeler\n• Karşılaştırma Grafikleri\n• Zaman Serisi Analizi\n• Ortalama Skorlar\n• Trend Analizi\n• Filtreleme ve Arama',
         caption: 'Karşılaştırma ve izleme özellikleri'
-      },
+      }, */
       actions: [
         {
           label: "Makale Karşılaştırma",
@@ -198,11 +198,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 7,
       title: "Zincirleme Etki Analizi (Kapsamlı Mod)",
       description: "Kapsamlı Mod'da, makalenin birincil, ikincil, üçüncül, dördüncül ve beşincil etkilerini analiz edebilirsiniz. Her seviye, önceki seviyeden türeyen etkileri gösterir.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '🔗 Zincirleme Etkiler\n\n1️⃣ Birincil: Doğrudan etki\n2️⃣ İkincil: Birincil → İkincil\n3️⃣ Üçüncül: İkincil → Üçüncül\n4️⃣ Dördüncül: Üçüncül → Dördüncül\n5️⃣ Beşincil: Dördüncül → Beşincil\n\nÖrnek:\nİlaç → Üretim → İstihdam → GSYİH → Eğitim',
         caption: '5 seviyeli zincirleme etki modeli'
-      },
+      }, */
       actions: [
         {
           label: "Etki Haritası",
@@ -224,11 +224,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 8,
       title: "Çarpan Katsayıları (Kapsamlı Mod)",
       description: "Kapsamlı Mod'da, ekonomik, sosyal, bilimsel ve çevresel çarpan katsayıları hesaplanır. Bu katsayılar, makalenin doğrudan etkisinin kaç kat büyüdüğünü gösterir.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '✖️ Çarpan Katsayıları\n\n💰 Ekonomik: 1.5x - 5.0x\n  Her $1 yatırım → $2-5 değer\n\n👥 Sosyal: 2.0x - 10.0x\n  1 doğrudan → 2-10 dolaylı faydalanan\n\n🔬 Bilimsel: 10x - 1000x\n  1 öncü → 10-1000 takip makalesi\n\n🌍 Çevresel: 1.5x - 4.0x',
-        caption: 'Çarpan katsayısı aralıkları'
-      },
+        caption: 'Çarpan katsayıısı aralıkları'
+      }, */
       actions: [
         {
           label: "Çarpan Detayları",
@@ -250,11 +250,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 9,
       title: "Ağ Etkileri ve Geri Besleme (Kapsamlı Mod)",
       description: "Kapsamlı Mod'da, ağ etkileri (platform, işbirliği) ve geri besleme döngüleri (pozitif, negatif, gecikmeli) analiz edilir. Bu analizler, makalenin ekosistem etkisini gösterir.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '🌐 Ağ Etkileri\n\n📡 Doğrudan Ağ Etkisi\n  Kullanıcı sayısı ↑ → Değer ↑²\n\n🔗 Dolaylı Ağ Etkisi\n  Tamamlayıcı ürün/hizmet sayısı\n\n♻️ Geri Besleme Döngüleri\n  + Pozitif (kendini güçlendiren)\n  - Negatif (dengeleyici)\n  ⏱ Gecikmeli (zaman gecikmeli)',
         caption: 'Ağ etkileri ve geri besleme döngüleri'
-      },
+      }, */
       actions: [
         {
           label: "Ağ Haritası",
@@ -276,11 +276,11 @@ export const DEMO_CONTENT: DemoData = {
       id: 10,
       title: "Final Rapor ve Öneriler",
       description: "Tüm analizler tamamlandıktan sonra, kapsamlı final raporu görüntüleyebilirsiniz. Rapor, tüm boyutları, zincirleme etkileri, çarpan katsayılarını ve iyileştirme önerilerini içerir.",
-      visual: {
+      /* visual: {
         type: 'chart',
         content: '📑 Final Rapor\n\n✅ Genel Skor (HIS)\n✅ 16 Boyut Analizi\n✅ 193 Gösterge Detayı\n✅ Zincirleme Etkiler (5 seviye)\n✅ Çarpan Katsayıları (4 tür)\n✅ Ağ Etkileri\n✅ Geri Besleme Döngüleri\n✅ Güçlü/Zayıf Yönler\n✅ İyileştirme Önerileri',
         caption: 'Kapsamlı final rapor içeriği'
-      },
+      }, */
       actions: [
         {
           label: "Rapor İndir",

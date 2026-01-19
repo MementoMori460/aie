@@ -1,31 +1,20 @@
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, evaluations, evaluationIndicators, InsertEvaluation, InsertEvaluationIndicator, reviews, reviewerAssignments, InsertReview, InsertReviewerAssignment, auditLogs, InsertAuditLog } from "../drizzle/schema";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import { User, InsertUser, users, evaluations, evaluationIndicators, InsertEvaluation, InsertEvaluationIndicator, reviews, reviewerAssignments, InsertReview, InsertReviewerAssignment, auditLogs, InsertAuditLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// Initialize SQLite database
+const sqlite = new Database("sqlite.db");
+const db = drizzle(sqlite);
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
-  }
-  return _db;
+  return db;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
   }
 
   try {
@@ -67,7 +56,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    // SQLite upsert syntax
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -77,59 +68,36 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
 // Evaluation queries
 
 export async function createEvaluation(data: InsertEvaluation) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const result = await db.insert(evaluations).values(data);
-  return result[0].insertId;
+  const result = await db.insert(evaluations).values(data).returning({ insertedId: evaluations.id });
+  return result[0].insertedId;
 }
 
 export async function getEvaluationById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-
   const result = await db.select().from(evaluations).where(eq(evaluations.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getUserEvaluations(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
   return await db.select().from(evaluations).where(eq(evaluations.userId, userId)).orderBy(desc(evaluations.createdAt));
 }
 
 export async function getEvaluationsByIds(ids: number[]) {
-  const db = await getDb();
-  if (!db || ids.length === 0) return [];
+  if (ids.length === 0) return [];
   return await db.select().from(evaluations).where(inArray(evaluations.id, ids));
 }
 
 export async function updateEvaluation(id: number, data: Partial<InsertEvaluation>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   await db.update(evaluations).set(data).where(eq(evaluations.id, id));
 }
 
 export async function deleteEvaluation(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   // Delete indicators first
   await db.delete(evaluationIndicators).where(eq(evaluationIndicators.evaluationId, id));
   // Then delete evaluation
@@ -139,9 +107,6 @@ export async function deleteEvaluation(id: number) {
 // Evaluation indicator queries
 
 export async function saveIndicator(data: InsertEvaluationIndicator) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   // Check if indicator already exists
   const existing = await db
     .select()
@@ -163,15 +128,12 @@ export async function saveIndicator(data: InsertEvaluationIndicator) {
     return existing[0].id;
   } else {
     // Insert new
-    const result = await db.insert(evaluationIndicators).values(data);
-    return result[0].insertId;
+    const result = await db.insert(evaluationIndicators).values(data).returning({ insertedId: evaluationIndicators.id });
+    return result[0].insertedId;
   }
 }
 
 export async function getEvaluationIndicators(evaluationId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
   return await db
     .select()
     .from(evaluationIndicators)
@@ -179,9 +141,6 @@ export async function getEvaluationIndicators(evaluationId: number) {
 }
 
 export async function getIndicatorByCode(evaluationId: number, indicatorCode: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-
   const result = await db
     .select()
     .from(evaluationIndicators)
@@ -199,17 +158,11 @@ export async function getIndicatorByCode(evaluationId: number, indicatorCode: st
 // Reviewer assignment queries
 
 export async function assignReviewer(data: InsertReviewerAssignment) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const result = await db.insert(reviewerAssignments).values(data);
-  return result[0].insertId;
+  const result = await db.insert(reviewerAssignments).values(data).returning({ insertedId: reviewerAssignments.id });
+  return result[0].insertedId;
 }
 
 export async function getReviewerAssignments(evaluationId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
   return await db
     .select()
     .from(reviewerAssignments)
@@ -217,9 +170,6 @@ export async function getReviewerAssignments(evaluationId: number) {
 }
 
 export async function updateReviewerAssignmentStatus(id: number, status: "assigned" | "in_progress" | "completed") {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   await db
     .update(reviewerAssignments)
     .set({ status, completedAt: status === "completed" ? new Date() : null })
@@ -229,9 +179,6 @@ export async function updateReviewerAssignmentStatus(id: number, status: "assign
 // Review queries
 
 export async function saveReview(data: InsertReview) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   // Check if review already exists for this reviewer and evaluation
   const existing = await db
     .select()
@@ -251,15 +198,12 @@ export async function saveReview(data: InsertReview) {
       .where(eq(reviews.id, existing[0].id));
     return existing[0].id;
   } else {
-    const result = await db.insert(reviews).values(data);
-    return result[0].insertId;
+    const result = await db.insert(reviews).values(data).returning({ insertedId: reviews.id });
+    return result[0].insertedId;
   }
 }
 
 export async function getReviewsByEvaluation(evaluationId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
   return await db
     .select()
     .from(reviews)
@@ -267,9 +211,6 @@ export async function getReviewsByEvaluation(evaluationId: number) {
 }
 
 export async function getReviewByReviewer(evaluationId: number, reviewerId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-
   const result = await db
     .select()
     .from(reviews)
@@ -287,15 +228,10 @@ export async function getReviewByReviewer(evaluationId: number, reviewerId: numb
 // Audit log queries
 
 export async function createAuditLog(data: InsertAuditLog) {
-  const db = await getDb();
-  if (!db) return;
   await db.insert(auditLogs).values(data);
 }
 
 export async function getAuditLogs(evaluationId?: number) {
-  const db = await getDb();
-  if (!db) return [];
-
   const query = db.select().from(auditLogs);
   if (evaluationId) {
     return await query.where(eq(auditLogs.evaluationId, evaluationId)).orderBy(desc(auditLogs.createdAt));

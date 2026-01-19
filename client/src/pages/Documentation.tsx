@@ -260,6 +260,7 @@ export default function Documentation() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Göstergeler</CardTitle>
+
               <CardDescription>33 göstergenin detaylı açıklamaları</CardDescription>
             </CardHeader>
             <CardContent>
