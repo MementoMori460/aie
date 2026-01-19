@@ -254,12 +254,10 @@ export const appRouter = router({
         try {
           const text = await extractTextFromPDF(input.localPath);
           const metadata = await extractPaperMetadata(text);
-          // Clean up temp file after extraction
-          cleanupTempFile(input.localPath);
+          // File is persisted in uploads folder, so we don't delete it
           return metadata;
         } catch (error) {
-          // Clean up temp file even if extraction fails
-          cleanupTempFile(input.localPath);
+          console.error("Metadata extraction failed:", error);
           throw error;
         }
       }),

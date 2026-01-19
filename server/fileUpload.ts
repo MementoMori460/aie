@@ -22,19 +22,22 @@ export async function uploadPdfFromBase64(base64Data: string, filename: string):
     const randomSuffix = Math.random().toString(36).substring(7);
     const fileKey = `pdf-uploads/${timestamp}-${randomSuffix}-${filename}`;
 
-    // Save to temporary local file for PDF processing
-    const localPath = join(tmpdir(), `${timestamp}-${randomSuffix}-${filename}`);
+    // Ensure uploads directory exists
+    const uploadsDir = join(process.cwd(), "uploads");
+    try {
+      if (!require("fs").existsSync(uploadsDir)) {
+        require("fs").mkdirSync(uploadsDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error("Could not create uploads dir", e);
+    }
+
+    // Save to local persistent file
+    const localPath = join(uploadsDir, `${timestamp}-${randomSuffix}-${filename}`);
     writeFileSync(localPath, buffer);
 
-    // Upload to S3 (Optional - fail gracefully for local/self-hosted envs)
-    let url = "";
-    try {
-      const result = await storagePut(fileKey, buffer, "application/pdf");
-      url = result.url;
-    } catch (s3Error) {
-      console.warn("S3 Upload failed (likely missing credentials), continuing with local file only:", s3Error);
-      // We continue because we have the local file for processing
-    }
+    // Return URL for static access (served via express static)
+    const url = `/uploads/${timestamp}-${randomSuffix}-${filename}`;
 
     return {
       fileKey,
