@@ -30,8 +30,8 @@ export interface DemoData {
 }
 
 export const DEMO_CONTENT: DemoData = {
-  title: "Sistem Tanıtımı",
-  subtitle: "Akademik Makale Etki Değerlendirmesi Sistemi Nasıl Kullanılır?",
+  title: "",
+  subtitle: "",
   totalDuration: 5,
   steps: [
     {

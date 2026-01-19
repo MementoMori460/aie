@@ -88,15 +88,16 @@ export function InteractiveDemo() {
         İnteraktif Demo'yu İzle
       </Button>
 
-      {/* Demo Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{demoData.title}</DialogTitle>
-            </div>
-            <p className="text-sm text-muted-foreground">{demoData.subtitle}</p>
-          </DialogHeader>
+          {(demoData.title || demoData.subtitle) && (
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle>{demoData.title}</DialogTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">{demoData.subtitle}</p>
+            </DialogHeader>
+          )}
 
           {/* Progress Section */}
           <div className="space-y-4">
