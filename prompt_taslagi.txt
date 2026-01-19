@@ -1,0 +1,199 @@
+Akademik Makale Bütünsel Etki 
+Değerlendirmesi Promptu
+
+Amaç: Bu prompt, belirli bir akademik makalenin yazım öncesi, sırası, sonrası ve uzun 
+vadeli etkilerini, tüm disiplinler için geçerli olacak şekilde, nitel ve nicel tüm boyutlarıyla 
+analiz etmek, mevcut ve potansiyel tüm etkileşimleri değerlendirmek ve makaleye 
+bütünsel bir etki puanı atamak için tasarlanmıştır.
+
+Değerlendirilecek Makale Bilgileri:
+• Başlık: [Makale başlığını buraya girin]
+• Yazarlar: [Yazarları buraya girin]
+• Dergi/Yayın Yeri: [Dergi adını veya yayın yerini buraya girin]
+• Yayın Tarihi: [Yayın tarihini buraya girin]
+• DOI/Link: [DOI veya makaleye erişim linkini buraya girin]
+• Özet: [Makalenin özetini buraya yapıştırın]
+• Tam Metin: [Makalenin tam metnini buraya yapıştırın veya erişim sağlayın]
+
+Değerlendirme Çerçevesi
+
+Bölüm 1: Makale Yaşam Döngüsü Analizi
+
+Faz 1: Yayın Öncesi Dönem (Kavramsallaştırma ve Geliştirme)
+Bu faz, araştırma ﬁkrinin doğuşundan makalenin yayınlanmasına kadar olan süreci kapsar.
+• Araştırma Soruları:
+
+• Araştırmanın temelini oluşturan problem veya soru nedir? Bu problemin seçilme 
+
+gerekçeleri nelerdir?
+
+• Araştırma hangi fonlar tarafından desteklenmiştir? Fon büyüklüğü ve kaynağının 
+
+araştırma sürecine etkisi ne olmuştur?
+
+• Araştırma ekibi nasıl bir araya gelmiştir? Disiplinlerarası bir işbirliği mevcut mudur?
+• Araştırmanın ön bulguları konferanslarda, çalıştaylarda veya ön baskı (preprint) 
+olarak paylaşılmış mıdır? Bu paylaşımların geri bildirimleri ve etkileri nelerdir?
+
+• Değerlendirme Metrikleri:
+
+• Nicel: Alınan fon miktarı, işbirliği yapılan kurum ve araştırmacı sayısı, sunum yapılan 
+
+konferans sayısı, ön baskı atıf ve indirme sayıları.
+
+• Nitel: Fon başvuru metinlerinin analizi, işbirliği ağının haritalanması, konferans 
+
+sunumlarından ve ön baskılardan gelen geri bildirimlerin içerik analizi.
+
+Faz 2: Yayın Süreci (Hakem Değerlendirmesi ve Yayım)
+Bu faz, makalenin yazımından hakem sürecine ve yayınlanmasına kadar olan adımları 
+inceler.
+
+• Araştırma Soruları:
+
+• Makale hangi dergiye sunulmuştur? Dergi seçiminin gerekçeleri nelerdir (etki 
+
+faktörü, açık erişim, hedef kitle vb.)?
+
+• Hakem değerlendirme süreci nasıl işlemiştir? Gelen eleştiriler makalenin kalitesini 
+
+nasıl etkilemiştir?
+
+• Yayın sürecinde etik ihlaller veya çıkar çatışmaları yaşanmış mıdır?
+• Makalenin açık erişim (open access) olarak yayınlanmasının potansiyel etkileri 
+
+nelerdir?
+
+• Değerlendirme Metrikleri:
+
+• Nicel: Derginin etki faktörü, kabul oranı, hakem değerlendirme süresi, revizyon 
+
+sayısı.
+
+• Nitel: Hakem raporlarının analizi, yazarın hakem eleştirilerine verdiği yanıtların 
+
+incelenmesi, derginin yayın politikalarının ve hedef kitlesinin analizi.
+
+Faz 3: Yayın Sonrası Dönem (Kısa ve Orta Vadeli Etki)
+Bu faz, makalenin yayınlanmasından sonraki ilk 5 yılı kapsar.
+• Araştırma Soruları:
+
+• Makale ne kadar atıf almıştır? Atıf yapan makalelerin niteliği ve dağılımı nasıldır?
+• Altmetrikler (sosyal medya, haberler, bloglar, politika belgeleri) açısından 
+
+makalenin görünürlüğü ve etkisi nedir?
+
+• Makale, diğer araştırmacılar için yeni araştırma alanları veya projeler tetiklemiş 
+
+midir?
+
+• Makale, endüstri veya kamu sektöründe pratik uygulamalara yol açmış mıdır?
+• Medyada ne tür bir yer bulmuştur? Kamuoyunda nasıl bir yankı uyandırmıştır?
+
+• Değerlendirme Metrikleri:
+
+• Nicel: Atıf sayısı, h-indeksi, Altmetric Attention Score, patent atıﬂarı, medya haber 
+
+sayısı, sosyal medya paylaşım ve etkileşim sayısı.
+
+• Nitel: Atıf yapan makalelerin içerik analizi, politika belgelerindeki referansların 
+incelenmesi, medya içeriğinin tonu ve kapsamının analizi, vaka çalışmaları.
+
+Faz 4: Uzun Vadeli Etki (Kalıcı Miras)
+Bu faz, makalenin yayınlanmasından 5 yıl ve sonrasını inceler.
+• Araştırma Soruları:
+
+• Makale, kendi alanında bir paradigma değişimine yol açmış mıdır?
+• Makalenin bulguları, politika veya yasal düzenlemelerde somut değişikliklere neden 
+
+olmuş mudur?
+
+• Toplumsal normlarda, davranışlarda veya kamuoyu algısında kalıcı bir değişiklik 
+
+yaratmış mıdır?
+
+• Eğitim müfredatlarına (lisans, lisansüstü) entegre edilmiş midir?
+• Ekonomik olarak yeni pazarlar, ürünler veya hizmetler yaratmış mıdır?
+• Makalenin ortaya koyduğu bulguların zamanla geçerliliğini yitirdiği veya 
+
+çürütüldüğü durumlar olmuş mudur (negatif etki)?
+
+• Değerlendirme Metrikleri:
+
+• Nicel: Uzun vadeli atıf trendleri, ekonomik modellemeler, müfredat analizleri, 
+
+sosyal anketler.
+
+• Nitel: Alanın önde gelen uzmanlarıyla yapılan görüşmeler, tarihsel analizler, politika 
+
+dokümanlarının retrospektif analizi, ders kitapları ve eğitim materyallerinin 
+incelenmesi.
+
+Bölüm 2: Bütünsel Etki Analizi
+
+Bu bölümde, yaşam döngüsü analizinden elde edilen bulgular, daha geniş bir etki 
+çerçevesinde sentezlenir.
+
+2.1. Çok Boyutlu Etki Kategorileri
+
+Makalenin aşağıdaki kategorilerdeki etkilerini, her bir kategori için kanıtlar sunarak 
+değerlendirin:
+• Akademik Etki: (Teori, metodoloji, yeni araştırma alanları)
+• Toplumsal Etki: (Kamuoyu farkındalığı, davranış değişikliği, kültürel değişim)
+• Ekonomik Etki: (Ticarileşme, istihdam, verimlilik artışı)
+• Politika Etkisi: (Yasa ve yönetmelikler, kamu politikaları, uluslararası anlaşmalar)
+• Sağlık Etkisi: (Klinik uygulamalar, tedavi yöntemleri, halk sağlığı)
+
+• Çevresel Etki: (Koruma politikaları, sürdürülebilirlik, ekosistem sağlığı)
+• Kurumsal Etki: (Üniversite itibarı, yeni fonlar, öğrenci ilgisi)
+• Negatif Etki: (Yanlış bilgilendirme, etik sorunlar, istenmeyen sonuçlar)
+
+2.2. Katkı ve Atıf Değerlendirmesi
+Gözlemlenen etkilerin ne ölçüde doğrudan bu makaleye atfedilebileceğini ve ne ölçüde 
+makalenin bir katkı faktörü olduğunu analiz edin. Etki yollarını (impact pathways) 
+haritalandırarak, makalenin diğer faktörlerle (örneğin, medya, politika yapıcılar, diğer 
+araştırmalar) nasıl bir etkileşim içinde olduğunu gösterin.
+
+2.3. Metriklerin Ötesinde: Eksik ve Gelecek Perspektiﬂeri
+
+• Mevcut Metriklerin Sınırlılıkları: Bu makalenin etkisini ölçerken, mevcut nicel ve nitel 
+
+metriklerin hangi yönleri yakalamada yetersiz kaldığını belirtin.
+
+• Ölçülemeyen Etkiler: Hangi etkilerin (örneğin, ilham verme, düşünsel ufuk açma, 
+
+sosyal adalet katkısı) mevcut yöntemlerle ölçülemediğini tartışın.
+
+• Yeni Metrik Önerileri: Bu makalenin bütünsel etkisini daha iyi yakalayabilmek için 
+
+hangi yeni, hipotetik metriklerin veya değerlendirme yaklaşımlarının 
+geliştirilebileceğini önerin. Örneğin:
+• Bütünsel Etki Skoru (Holistic Impact Score): Farklı etki kategorilerini 
+
+ağırlıklandırarak tek bir skor üreten bir model.
+
+• Bağlamsal Uygunluk İndeksi (Contextual Relevance Index): Makalenin bulgularının 
+
+farklı sosyal ve kültürel bağlamlardaki önemini ölçen bir indeks.
+
+• Uzun Vadeli Dönüşüm İndeksi (Long-term Transformation Index): Makalenin zaman 
+
+içindeki dönüştürücü gücünü izleyen bir metrik.
+
+Bölüm 3: Sonuç ve Puanlama
+
+Yukarıdaki tüm analizler ışığında, makalenin bütünsel etkisini özetleyin. Makaleye 1'den 
+100'e kadar bir Bütünsel Etki Puanı (Holistic Impact Score) atayın. Bu puanı atarken 
+kullandığınız ağırlıklandırmayı ve gerekçelerinizi ayrıntılı olarak açıklayın. Puanlama, 
+aşağıdaki gibi bir döküme sahip olabilir:
+• Akademik Etki Ağırlığı: %XX
+• Toplumsal ve Politik Etki Ağırlığı: %YY
+• Ekonomik ve Pratik Etki Ağırlığı: %ZZ
+• Uzun Vadeli ve Dönüştürücü Etki Ağırlığı: %WW
+
+• Negatif Etki Düzeltmesi: -%NN
+Nihai Değerlendirme Raporu: Tüm bulguları, analizleri ve puanlamayı içeren kapsamlı bir 
+rapor oluşturun. Rapor, makalenin bilime ve topluma yaptığı katkının dengeli, eleştirel ve 
+kanıta dayalı bir portresini sunmalıdır.
+
+

@@ -1,0 +1,2647 @@
+HIS v3.0 Uctan Uca Calisan Urun Kapsami + Hesaplama Spesifikasyonu (Kapsam Ekleri)
+
+Surum: 1.0 Tarih: 07 January 2026 Durum: Taslak (Uretime Hazir)
+
+Revizyon Gecmisi
+Revizyon
+Tarih
+Aciklama
+1.0
+07 Ocak 2026
+Urunlesme eksikleri + etkileisim akislari + kabul parametreleri + hesaplama formulleri ozetleri.
+
+1. Amac ve Kapsam
+Bu dokuman; HIS Teknik Kilavuzu v3.0'da tanimlanan gosterge katalogu ve hesaplama mantigini, uretime alinabilecek bir urun tasarimina donusturmek icin gerekli eksik kapsami (rol/yetki, is akis durumu, API, veri modeli, UI, NFR, test/DoD) tamamlar. Teknik kilavuz metni degistirilmez; bu dosya onu urunlesme acisindan tamamlar.
+2. ISTER.PARAM - Kabul Kriteri Parametreleri
+Tum esikler tek yerden yonetilir; kabul kriterleri bu parametrelere referans verir.
+ISTER.PARAM.DOI_VALIDATE_REGEX: DOI format dogrulama ifadesi (pattern)
+ISTER.PARAM.FETCH_LATENCY_P95_MAX: Harici veri cekimi p95 (tek kaynak)
+ISTER.PARAM.FETCH_SUCCESS_RATE_MIN: Harici veri cekimi basari orani alt siniri
+ISTER.PARAM.SCORE_DETERMINISM_REQUIRED: Ayni input+surum icin deterministik cikti zorunlulugu (bool)
+ISTER.PARAM.REVIEWER_MIN: Kapsamli mod icin minimum reviewer sayisi
+ISTER.PARAM.CONSENSUS_TRIGGER_DELTA: Uzlasi tetigi: ayni gosterge icin puan farki (>=)
+ISTER.PARAM.ICC_MIN_GOOD: Uzmanlar arasi guvenilirlik icin overall ICC alt siniri
+ISTER.PARAM.AUDIT_LOG_COVERAGE_MIN: Denetim izi kapsama orani alt siniri
+ISTER.PARAM.REPORT_EXPORT_TIME_P95_MAX: PDF rapor uretimi p95
+3. Hesaplama Spesifikasyonu - Zorunlu Formuller (Ozet)
+Bu bolum; uygulama icinde dogrudan kodlanacak minimum formul setini ozetler. Detayli gosterge tanimlari ve alt boyut haritalari Teknik Kilavuz Ek-A'dadir.
+3.1 Ağırliklandirma Hiyerarsisi
+Gosterge -> Alt Boyut: SD_score = Σ(I_i * W_I_i) / Σ(W_I_i)
+Alt Boyut -> Boyut: D_score = Σ(SD_j * W_SD_j) / Σ(W_SD_j)
+Boyut -> HIS (kapsamli mod): HIS = Σ(D_k * W_D_k) / Σ(W_D_k)
+Not: D3 (Negatif Etki ve Risk) icin (100 - D3) kullanilir (kilavuz notu).
+3.2 HIS - Hizli Mod
+RIS = (W_A * D1) + (W_S * D2)
+M_E = (D4 / 100)^k_E
+M_N = (1 - D3 / 100)^k_N
+HIS = RIS * M_E * M_N
+HIS = min(100, max(0, HIS)) (0-100 clamp)
+Parametreler (kilavuz): W_A=0.35, W_S=0.40, k_E=2, k_N=1.5
+3.3 HIS - Kapsamli Mod
+Base_HIS = Σ(D_i * W_i) / Σ(W_i)
+Cascade_HIS = Base_HIS * Cascade_Multiplier
+Final_HIS = min(Cascade_HIS, 100)
+3.4 Uzmanlar Arasi Guvenilirlik (ICC - Basit Yaklasim)
+Kilavuzdaki basit ICC yaklasimi (her gosterge icin): values = [reviewer skorlar]; mean=ortalama; variance=var. variance>0 ise icc = 1 - (variance / (mean^2 + variance)) else icc=1. overall_icc = ortalama(indicator_icc).
+Kabul: overall_icc >= ISTER.PARAM.ICC_MIN_GOOD ise durum='good', degilse 'needs_review'.
+4. Uctan Uca Etkilesim Akislari (HIS Baglaminda)
+I-01 Giris ve Organizasyon Baglami
+Girdi: e-posta/parola (veya SSO opsiyonel), org secimi.
+Islem: JWT oturum; org_id scoping; role check.
+Cikti: access_token, kullanici profili.
+Kabul: Yetkisiz endpoint erisimi 401/403; org izolasyonu zorunlu (DB+API test).
+I-02 Makale Olusturma (DOI) ve Metaveri Dogrulama
+Girdi: DOI.
+Islem: DOI regex + harici metadata cekimi; cakisma kontrolu; paper kaydi.
+Cikti: paper_id + metadata.
+Kabul: Gecersiz DOI -> hata; gecerli DOI -> METADATA_VERIFIED durumu.
+I-03 Harici Veri Cekimi (Fetch Orkestrasyonu)
+Girdi: evaluation_id.
+Islem: kaynak bazli joblar (OpenAlex, Crossref, Altmetric vb.); retry/backoff; rate-limit yonetimi; ham yanit saklama.
+Cikti: auto-indicator taslaklari + raw response arsivi.
+Metrik: basari_orani >= ISTER.PARAM.FETCH_SUCCESS_RATE_MIN; p95 <= ISTER.PARAM.FETCH_LATENCY_P95_MAX.
+I-04 Gosterge Girisi + Kanit Baglama
+Girdi: I_xxx degeri (numeric/binary/likert/categorical) + 0..n kanit.
+Islem: tip dogrulama; aralik kontrolu; zorunlu justification/evidence kurallari.
+Cikti: indicator_entry + evidence kayitlari.
+Kabul: Kilavuz validasyon kurallari uygulanir; audit zorunlu.
+I-05 Reviewer Atama + Bagimsiz Degerlendirme
+Girdi: reviewer listesi.
+Islem: bagimsiz ekran (diger skorlar gizli); submit; ICC hesapla.
+Cikti: review paketleri + ICC raporu.
+Kabul: Reviewer digerlerinin skorunu goremez; overall_icc raporlanir.
+I-06 Uzlasi (Consensus) Sureci
+Girdi: ayni gosterge icin farkli reviewer skorlar.
+Islem: tetik: |max-min| >= ISTER.PARAM.CONSENSUS_TRIGGER_DELTA; karar kaydi; final_value kilitleme.
+Cikti: consensus_decision.
+Kabul: Karar gerekceli ve kanit referansli; FINALIZED sonrasi revizyondan baska degismez.
+I-07 ScoreRun - Deterministik Skor Hesaplama
+Girdi: evaluation (final indicator set) + catalog_version + weightset_version + algorithm_version.
+Islem: SD->D->HIS hesapla; clamp; cascade; output_hash.
+Cikti: score_runs.output_json (detay breakdown) + output_hash.
+Kabul: ISTER.PARAM.SCORE_DETERMINISM_REQUIRED=true ise ayni input_hash -> ayni output_hash.
+I-08 Rapor Uretimi ve Disari Aktarma
+Girdi: evaluation_id + rapor formati (PDF/JSON).
+Islem: template ile rapor; kanit listesi; eksik veri bayraklari; imza/versiyon bilgisi.
+Cikti: indirilebilir rapor.
+Kabul: p95 <= ISTER.PARAM.REPORT_EXPORT_TIME_P95_MAX; raporda catalog/weightset/algorithm surumu gorunur.
+I-09 Versiyonlama ve Revizyon
+Girdi: FINALIZED evaluation icin duzeltme ihtiyaci.
+Islem: yeni evaluation_revision olustur; eski output immutable kalir; fark raporu.
+Cikti: revizyon zinciri.
+Kabul: geriye donuk degisiklik yok; sadece yeni revizyonla ilerlenir.
+5. Roller ve Yetkilendirme (RBAC)
+SYS_ADMIN: Global ayarlar, katalog/agirlik seti, tum orglara yetki.
+ORG_ADMIN: Org ici kullanici/rol, kurul sablonlari.
+EVALUATION_OWNER: Degerlendirme olusturma, surec yonetimi.
+REVIEWER: Atandigi degerlendirmelerde puanlama ve kanit girisi.
+BOARD_CHAIR: Uzlasi sureci ve final kilitleme.
+AUDITOR/VIEWER: Salt okunur rapor + audit erisimi.
+6. Is Akisi (State Machine)
+DRAFT
+METADATA_VERIFIED
+FETCHING
+AUTO_DATA_READY
+MANUAL_INPUT_IN_PROGRESS
+REVIEW_ASSIGNED
+INDEPENDENT_REVIEW
+CONSENSUS_REQUIRED
+CONSENSUS_MEETING
+SCORING_READY
+SCORED
+FINALIZED
+ARCHIVED
+7. Veri Modeli (DB) - Minimum Sema
+organizations, users
+papers (doi, title, year, authors, source)
+evaluations (mode, status, catalog_version, weightset_version, algorithm_version)
+indicator_entries (value_raw, value_normalized, justification)
+evidences (type, url/file, reliability_level, note)
+reviews, review_scores
+consensus_items, consensus_decisions
+score_runs (inputs_hash, output_json, output_hash)
+api_response_raw (source_name, request_json, response_json, status)
+audit_events
+8. Ic API (OpenAPI ile Dokumante)
+POST /auth/login, GET /me
+POST /papers (doi), GET /papers/{id}
+POST /evaluations, GET /evaluations/{id}
+POST /evaluations/{id}/fetch, GET /evaluations/{id}/fetch/status
+GET /evaluations/{id}/indicators, PUT /evaluations/{id}/indicators/{code}
+POST /evaluations/{id}/indicators/{code}/evidences
+POST /evaluations/{id}/board, POST /evaluations/{id}/reviews/submit
+GET /evaluations/{id}/consensus, POST /evaluations/{id}/consensus/{code}/decide
+POST /evaluations/{id}/score-runs
+GET /evaluations/{id}/reports/pdf, GET /evaluations/{id}/reports/json
+POST /compare
+9. UI/Ekran Kapsami (V1)
+Login
+Dashboard (durumlar)
+Makale olustur (DOI) + metadata gorunumu
+Degerlendirme olustur (Hizli/Kapsamli)
+Fetch ilerleme + eksik veri listesi
+Gosterge formlari (D1-16 sekmeleri; arama; autosave; validasyon)
+Kanit yonetimi (URL/dosya + guvenilirlik)
+Kurul/uye atama
+Reviewer ekrani (bagimsiz)
+Uzlasi ekrani (farklar/karar/toplanti notu)
+Skor sonucu + breakdown + guvenilirlik
+Rapor indir (PDF/JSON)
+Karsilastirma
+Admin (kullanici/rol, katalog/weight set, audit)
+10. NFR / Test / DoD
+NFR: org izolasyonu, RBAC, audit, secrets; fetch degraded mode; gozlemlenebilirlik (request_id/job_id).
+E2E: DOI->fetch->manual->review->consensus->score->PDF; rate limit senaryosu; determinism testi; revizyon testi.
+DoD: P0 gereksinimler + testler + OpenAPI + tek komut calisma (Docker Compose) + rapor + audit dogrulama.
+
+EK-A: HIS Complete Technical Guide v3 (Orijinal Metin)
+Bütünsel Etki Skoru (HIS) Tam Teknik Kılavuzu
+Akademik Makale Etki Değerlendirmesi Sistemi Versiyon: 3.0 - Kapsamlı Uygulama Referansı Tarih: Ocak 2026 Yazar: Manus AI
+
+
+
+Doküman Hakkında
+Bu kılavuz, Akademik Makale Etki Değerlendirmesi Sistemi'nin tüm bileşenlerini içeren bağımsız bir teknik referanstır. Her parametre için değerlendirme kurulu tanımları, veri kaynakları, API entegrasyonları, manuel veri giriş formları, hesaplama formülleri ve ağırlıklandırma metodolojisi detaylı olarak açıklanmıştır.
+
+
+
+İÇİNDEKİLER
+KISIM A: GENEL ÇERÇEVE
+Sistem Mimarisi ve Değerlendirme Süreci
+Değerlendirme Kurulları ve Uzman Profilleri
+Veri Toplama Metodolojisi
+
+KISIM B: PARAMETRE DETAYLARI 4. D1: Akademik Etki - 11 Parametre 5. D2: Toplumsal ve Pratik Etki - 11 Parametre 6. D3: Negatif Etki ve Risk - 9 Parametre 7. D4: Etik ve Sorumluluk - 6 Parametre 8. D5-D16: Genişletilmiş Boyutlar - 156 Parametre
+
+KISIM C: HESAPLAMA METODOLOJİSİ 9. Normalizasyon Fonksiyonları 10. Ağırlıklandırma Sistemi 11. HIS Hesaplama Formülleri 12. Zincirleme Etki ve Çarpan Katsayıları
+
+KISIM D: UYGULAMA 13. API Entegrasyon Rehberi 14. Manuel Veri Giriş Formları 15. Doğrulama ve Kalite Kontrol 16. Kod Uygulamaları
+
+
+
+KISIM A: GENEL ÇERÇEVE
+
+
+1. Sistem Mimarisi ve Değerlendirme Süreci
+1.1 Değerlendirme Modları
+1.2 Değerlendirme Akış Şeması
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                           DEĞERLENDİRME SÜRECİ                                      │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  AŞAMA 1: HAZIRLIK                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ 1.1 Makale DOI/Metadata girişi                                              │   │
+│  │ 1.2 Değerlendirme modu seçimi (Hızlı/Kapsamlı)                              │   │
+│  │ 1.3 Değerlendirme kurulu oluşturma (Kapsamlı mod için)                      │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                          │
+│                                          ▼                                          │
+│  AŞAMA 2: OTOMATİK VERİ TOPLAMA (API)                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ 2.1 Bibliyometrik veriler (Scopus, WoS, Semantic Scholar)                   │   │
+│  │ 2.2 Alternatif metrikler (Altmetric, PlumX)                                 │   │
+│  │ 2.3 Patent verileri (Lens.org, USPTO)                                       │   │
+│  │ 2.4 Politika atıfları (Overton)                                             │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                          │
+│                                          ▼                                          │
+│  AŞAMA 3: MANUEL VERİ GİRİŞİ                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ 3.1 Nitel değerlendirmeler (Likert 1-5)                                     │   │
+│  │ 3.2 İkili değerlendirmeler (Evet/Hayır)                                     │   │
+│  │ 3.3 Uzman panel değerlendirmeleri                                           │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                          │
+│                                          ▼                                          │
+│  AŞAMA 4: NORMALİZASYON                                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ 4.1 Logaritmik normalizasyon (nicel veriler)                                │   │
+│  │ 4.2 Lineer normalizasyon (Likert ölçeği)                                    │   │
+│  │ 4.3 İkili normalizasyon (Evet/Hayır)                                        │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                          │
+│                                          ▼                                          │
+│  AŞAMA 5: AĞIRLIKLANDIRMA VE HESAPLAMA                                             │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ 5.1 Gösterge ağırlıkları uygulama                                           │   │
+│  │ 5.2 Alt boyut skorları hesaplama                                            │   │
+│  │ 5.3 Boyut skorları hesaplama                                                │   │
+│  │ 5.4 Cascade çarpanları hesaplama (Kapsamlı mod)                             │   │
+│  │ 5.5 Final HIS hesaplama                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                          │
+│                                          ▼                                          │
+│  AŞAMA 6: DOĞRULAMA VE RAPORLAMA                                                   │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ 6.1 Veri tutarlılığı kontrolü                                               │   │
+│  │ 6.2 Aralık doğrulama                                                        │   │
+│  │ 6.3 Uzman onayı (Kapsamlı mod)                                              │   │
+│  │ 6.4 Rapor oluşturma                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+1.3 Veri Türleri ve Sınıflandırma
+
+
+2. Değerlendirme Kurulları ve Uzman Profilleri
+2.1 Kurul Yapısı
+Kapsamlı Mod değerlendirmesi için aşağıdaki kurul yapısı önerilmektedir:
+
+2.2 Uzman Profilleri ve Yetkinlikler
+Akademik Uzman Profili (D1, D4, D11)
+Değerlendirme Sorumlulukları:
+I_111-I_114: Atıf tabanlı etki değerlendirmesi
+I_131-I_133: Düşünsel katkı değerlendirmesi
+I_411-I_416: Etik ve metodolojik değerlendirme
+I_1111-I_1151: Eğitim etkisi değerlendirmesi
+
+Sektör Uzmanı Profili (D2, D5, D9)
+Değerlendirme Sorumlulukları:
+I_221-I_224: Endüstriyel etki değerlendirmesi
+I_511-I_561: Ekonomik etki değerlendirmesi
+I_911-I_961: Teknolojik etki değerlendirmesi
+
+Politika Uzmanı Profili (D2, D8)
+Değerlendirme Sorumlulukları:
+I_211-I_214: Politika etkisi değerlendirmesi
+I_811-I_852: Politik ve yasal etki değerlendirmesi
+
+Etik Uzmanı Profili (D3, D4, D13)
+Değerlendirme Sorumlulukları:
+I_311-I_319: Negatif etki ve risk değerlendirmesi
+I_411-I_416: Etik standartlar değerlendirmesi
+I_1311-I_1342: Güvenlik etkisi değerlendirmesi
+
+2.3 Uzman Değerlendirme Protokolü
+Adım 1: Bağımsız Değerlendirme Her uzman, diğer uzmanların skorlarını görmeden bağımsız değerlendirme yapar.
+
+Adım 2: Uzlaşı Toplantısı Skorlar arasında >1 puan fark varsa uzlaşı toplantısı düzenlenir.
+
+Adım 3: Final Skor Hesaplama
+Final_Skor = Medyan(Uzman_Skorları)
+
+Eğer Standart_Sapma > 1.0:
+    Güvenilirlik_Bayrağı = "Düşük"
+    Ek değerlendirme gerekli
+
+Uzman Ağırlıklandırma (Opsiyonel):
+Ağırlıklı_Skor = Σ(Uzman_Skoru × Uzman_Ağırlığı) / Σ(Uzman_Ağırlığı)
+
+Uzman_Ağırlığı = f(h-indeksi, alan_uyumu, deneyim_yılı)
+
+
+
+3. Veri Toplama Metodolojisi
+3.1 Otomatik Veri Toplama (API)
+3.1.1 Bibliyometrik Veriler
+Semantic Scholar API Örneği:
+Endpoint: https://api.semanticscholar.org/graph/v1/paper/{paper_id}
+Method: GET
+Headers: x-api-key: {API_KEY}
+
+Parametreler:
+  fields: citationCount,influentialCitationCount,fieldsOfStudy,
+          references,citations,publicationTypes
+
+Örnek Yanıt:
+{
+  "paperId": "649def34f8be52c8b66281af98ae884c09aef38b",
+  "citationCount": 156,
+  "influentialCitationCount": 23,
+  "fieldsOfStudy": ["Computer Science", "Medicine"],
+  "references": [...],
+  "citations": [...]
+}
+
+3.1.2 Alternatif Metrikler
+Altmetric API Örneği:
+Endpoint: https://api.altmetric.com/v1/doi/{DOI}
+Method: GET
+Headers: Authorization: Bearer {API_KEY}
+
+Örnek Yanıt:
+{
+  "altmetric_id": 123456,
+  "score": 45.5,
+  "readers_count": 234,
+  "tweeters": 89,
+  "news_count": 5,
+  "blog_count": 3,
+  "policy_count": 2,
+  "wikipedia_count": 1
+}
+
+3.1.3 Patent Verileri
+Lens.org API Örneği:
+Endpoint: https://api.lens.org/scholarly/search
+Method: POST
+Headers: 
+  Authorization: Bearer {TOKEN}
+  Content-Type: application/json
+
+Body:
+{
+  "query": {
+    "match": {"doi": "10.1234/example"}
+  },
+  "include": ["patent_citations"]
+}
+
+Örnek Yanıt:
+{
+  "data": [{
+    "lens_id": "123-456-789",
+    "patent_citation_count": 12,
+    "patent_citations": [...]
+  }]
+}
+
+3.1.4 Politika Atıfları
+3.2 Manuel Veri Giriş Formları
+3.2.1 Form Türleri
+3.2.2 Likert Ölçeği Standartları
+3.2.3 Form Validasyon Kuralları
+// Likert Validasyonu
+function validateLikert(value) {
+  return Number.isInteger(value) && value >= 1 && value <= 5;
+}
+
+// Sayısal Validasyon
+function validateNumeric(value, min, max) {
+  return typeof value === 'number' && 
+         !isNaN(value) && 
+         value >= min && 
+         value <= max;
+}
+
+// İkili Validasyon
+function validateBinary(value) {
+  return value === 0 || value === 1;
+}
+
+// Gerekçe Validasyonu
+function validateJustification(text, minLength = 50) {
+  return typeof text === 'string' && text.trim().length >= minLength;
+}
+
+
+
+KISIM B: PARAMETRE DETAYLARI
+
+
+4. D1: Akademik Etki
+4.1 Boyut Özeti
+4.2 Alt Boyutlar ve Ağırlıklar
+4.3 Parametre Detayları
+
+
+I_111: Normalize Edilmiş Atıf Skoru
+Tanım: Makalenin aldığı atıf sayısının, aynı yıl ve alanda yayınlanan makalelerin ortalama atıf sayısına göre normalize edilmiş değeri.
+
+Veri Kaynakları:
+
+API Entegrasyonu:
+
+# Semantic Scholar API
+def get_citation_count(doi: str) -> dict:
+    """
+    Atıf sayısını Semantic Scholar API'den al
+
+    Returns:
+        {
+            'citation_count': int,
+            'influential_citations': int,
+            'field': str,
+            'year': int
+        }
+    """
+    import requests
+
+    url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}"
+    params = {
+        'fields': 'citationCount,influentialCitationCount,year,fieldsOfStudy'
+    }
+    headers = {'x-api-key': API_KEY}
+
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+
+    return {
+        'citation_count': data.get('citationCount', 0),
+        'influential_citations': data.get('influentialCitationCount', 0),
+        'field': data.get('fieldsOfStudy', ['Unknown'])[0],
+        'year': data.get('year')
+    }
+
+Normalizasyon Formülü:
+
+Ham Değer: citation_count (atıf sayısı)
+Max Değer: field_year_max (aynı alan ve yıldaki maksimum atıf)
+
+Normalize_Skor = 100 × (ln(1 + citation_count) / ln(1 + field_year_max))
+
+Referans Değerler (Alan: Computer Science, 2020):
+
+Manuel Giriş Formu (API başarısız olursa):
+
+┌─────────────────────────────────────────────────────────────┐
+│ I_111: Normalize Edilmiş Atıf Skoru                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Toplam Atıf Sayısı: [________]                              │
+│                                                             │
+│ Veri Kaynağı: [Dropdown: Scopus/WoS/Scholar/Diğer]          │
+│                                                             │
+│ Erişim Tarihi: [____/____/________]                         │
+│                                                             │
+│ Alan: [Dropdown: Alan listesi]                              │
+│                                                             │
+│ Yayın Yılı: [________]                                      │
+│                                                             │
+│ Alandaki Ortalama Atıf: [________] (opsiyonel)              │
+│                                                             │
+│ Kanıt/Ekran Görüntüsü: [Dosya Yükle]                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+Doğrulama Kuralları:
+
+
+
+I_112: Atıf Yapan Kaynakların Kalitesi
+Tanım: Makaleye atıf yapan kaynakların akademik kalitesi. Atıf yapan dergilerin etki faktörleri, yazarların h-indeksleri ve kurumların prestiji değerlendirilir.
+
+Değerlendirme Kriterleri:
+
+Yardımcı Veri Kaynakları:
+
+Uzman Değerlendirme Formu:
+
+┌─────────────────────────────────────────────────────────────┐
+│ I_112: Atıf Yapan Kaynakların Kalitesi                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Değerlendirme: ○ 1  ○ 2  ○ 3  ○ 4  ○ 5                      │
+│                                                             │
+│ Alt Kriterler (Referans):                                   │
+│                                                             │
+│ □ Atıf yapan dergilerin ortalama IF'si:                     │
+│   ○ <1  ○ 1-2  ○ 2-5  ○ 5-10  ○ >10                         │
+│                                                             │
+│ □ Atıf yapan yazarların ortalama h-indeksi:                 │
+│   ○ <5  ○ 5-10  ○ 10-20  ○ 20-40  ○ >40                     │
+│                                                             │
+│ □ Atıf yapan kurumların prestiji:                           │
+│   ○ Bilinmiyor  ○ Ulusal  ○ Bölgesel  ○ Uluslararası  ○ Top 100 │
+│                                                             │
+│ Gerekçe (min. 50 karakter):                                 │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │                                                         │ │
+│ │                                                         │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Uzman: [Ad Soyad]  Tarih: [____/____/________]              │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+Normalizasyon:
+
+Likert_Değer: 1-5
+Normalize_Skor = ((Likert_Değer - 1) / (5 - 1)) × 100
+
+Örnek: Likert = 4 → Skor = ((4-1)/(5-1)) × 100 = 75
+
+
+
+I_113: Disiplinlerarası Atıf Çeşitliliği
+Tanım: Makaleye atıf yapan çalışmaların farklı disiplinlerden gelme oranı. Yüksek disiplinlerarası çeşitlilik, araştırmanın geniş etki alanını gösterir.
+
+Otomatik Hesaplama (API):
+
+def calculate_interdisciplinary_diversity(doi: str) -> float:
+    """
+    Disiplinlerarası çeşitlilik indeksi hesapla
+
+    Simpson Çeşitlilik İndeksi kullanılır:
+    D = 1 - Σ(pi²)
+
+    pi = i. disiplinden gelen atıf oranı
+    """
+    # Atıf yapan makalelerin alanlarını al
+    citing_papers = get_citing_papers(doi)
+
+    # Alan dağılımını hesapla
+    field_counts = {}
+    for paper in citing_papers:
+        field = paper.get('field', 'Unknown')
+        field_counts[field] = field_counts.get(field, 0) + 1
+
+    total = sum(field_counts.values())
+    if total == 0:
+        return 0
+
+    # Simpson indeksi
+    simpson = sum((count/total)**2 for count in field_counts.values())
+    diversity_index = 1 - simpson
+
+    # 0-1 aralığını 1-5 Likert'e dönüştür
+    likert = 1 + (diversity_index * 4)
+
+    return round(likert, 1)
+
+Likert Dönüşüm Tablosu:
+
+
+
+I_114: Atıf Bağlamı
+Tanım: Atıfların makaleyi nasıl kullandığı - destekleyici mi, eleştirel mi, yöntemsel mi, arka plan mı?
+
+Değerlendirme Kriterleri:
+
+Yardımcı Araçlar:
+
+
+
+I_121: Altmetric Attention Score
+Tanım: Altmetric tarafından hesaplanan, makalenin çevrimiçi ilgi düzeyini ölçen bileşik skor.
+
+API Entegrasyonu:
+
+def get_altmetric_score(doi: str) -> dict:
+    """
+    Altmetric skorunu API'den al
+    """
+    import requests
+
+    url = f"https://api.altmetric.com/v1/doi/{doi}"
+    headers = {'Authorization': f'Bearer {ALTMETRIC_API_KEY}'}
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            'score': data.get('score', 0),
+            'readers_count': data.get('readers_count', 0),
+            'tweeters': data.get('tweeters', 0),
+            'news_count': data.get('news_count', 0),
+            'blog_count': data.get('blog_count', 0),
+            'policy_count': data.get('policy_count', 0),
+            'wikipedia_count': data.get('wikipedia_count', 0),
+            'percentile': data.get('context', {}).get('all', {}).get('pct', 0)
+        }
+    return {'score': 0}
+
+Normalizasyon:
+
+Max Değer: 1000 (varsayılan)
+Normalize_Skor = 100 × (ln(1 + altmetric_score) / ln(1 + 1000))
+
+Referans Değerler:
+
+
+
+I_122: Medya Görünürlüğü ve Kalitesi
+Tanım: Makalenin haber medyasında yer alma sayısı ve bu kaynakların kalitesi.
+
+Otomatik Veri (Altmetric API'den):
+news_count: Haber sayısı
+Haber kaynakları listesi
+
+Kalite Değerlendirme Kriterleri:
+
+
+
+I_123: Wikipedia Etkisi
+Tanım: Makalenin Wikipedia'da referans olarak kullanılıp kullanılmadığı.
+
+API Entegrasyonu:
+
+def check_wikipedia_citation(doi: str) -> dict:
+    """
+    Wikipedia'da atıf kontrolü
+    """
+    # Altmetric API'den
+    altmetric_data = get_altmetric_score(doi)
+    wikipedia_count = altmetric_data.get('wikipedia_count', 0)
+
+    return {
+        'cited': wikipedia_count > 0,
+        'count': wikipedia_count,
+        'score': 100 if wikipedia_count > 0 else 0
+    }
+
+
+
+I_124: Sosyal Medya Tartışma Derinliği
+Tanım: Sosyal medyadaki tartışmaların derinliği ve kalitesi (sadece paylaşım sayısı değil).
+
+Değerlendirme Kriterleri:
+
+
+
+I_131: Paradigma Değişimi Potansiyeli
+Tanım: Araştırmanın mevcut paradigmayı değiştirme veya yeni bir paradigma oluşturma potansiyeli.
+
+Değerlendirme Kriterleri:
+
+Uzman Değerlendirme Soruları:
+
+Bu çalışma alandaki temel varsayımları sorguluyor mu?
+Yeni bir kavramsal çerçeve sunuyor mu?
+Mevcut teorileri geçersiz kılabilecek bulgular var mı?
+Alan dışından araştırmacıları etkileme potansiyeli var mı?
+
+
+
+I_132: Yeni Araştırma Alanı Yaratma
+Değerlendirme Kriterleri:
+
+
+
+I_133: Metodolojik/Teorik Yenilik
+Değerlendirme Kriterleri:
+
+
+
+4.4 D1 Boyut Skoru Hesaplama
+Adım 1: Alt Boyut Skorları
+
+def calculate_D1_subdimension_scores(indicators: dict) -> dict:
+    """
+    D1 alt boyut skorlarını hesapla
+    """
+    # SD1.1: Atıf Tabanlı Etki
+    SD1_1 = (
+        indicators['I_111'] * 0.40 +
+        indicators['I_112'] * 0.25 +
+        indicators['I_113'] * 0.20 +
+        indicators['I_114'] * 0.15
+    )
+
+    # SD1.2: Alternatif Etki Metrikleri
+    SD1_2 = (
+        indicators['I_121'] * 0.35 +
+        indicators['I_122'] * 0.25 +
+        indicators['I_123'] * 0.20 +
+        indicators['I_124'] * 0.20
+    )
+
+    # SD1.3: Düşünsel Katkı
+    SD1_3 = (
+        indicators['I_131'] * 0.40 +
+        indicators['I_132'] * 0.35 +
+        indicators['I_133'] * 0.25
+    )
+
+    return {
+        'SD1_1': SD1_1,
+        'SD1_2': SD1_2,
+        'SD1_3': SD1_3
+    }
+
+Adım 2: Boyut Skoru
+
+def calculate_D1_score(subdimensions: dict) -> float:
+    """
+    D1 boyut skorunu hesapla
+    """
+    D1 = (
+        subdimensions['SD1_1'] * 0.40 +
+        subdimensions['SD1_2'] * 0.30 +
+        subdimensions['SD1_3'] * 0.30
+    )
+
+    return min(100, max(0, D1))
+
+
+
+5. D2: Toplumsal ve Pratik Etki
+5.1 Boyut Özeti
+5.2 Alt Boyutlar ve Ağırlıklar
+5.3 Parametre Detayları
+
+
+I_211: Politika Dokümanlarında Atıf
+Tanım: Makalenin politika dokümanlarında (hükümet raporları, parlamento tutanakları, uluslararası kuruluş raporları) atıf alma sayısı.
+
+API Entegrasyonu:
+
+def get_policy_citations(doi: str) -> dict:
+    """
+    Politika atıflarını Overton API'den al
+    """
+    import requests
+
+    # Overton API
+    url = "https://api.overton.io/search"
+    headers = {'Authorization': f'Bearer {OVERTON_API_KEY}'}
+    params = {'doi': doi}
+
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            'policy_count': data.get('total_count', 0),
+            'documents': data.get('documents', []),
+            'countries': list(set(d.get('country') for d in data.get('documents', [])))
+        }
+
+    # Alternatif: Altmetric'ten
+    altmetric = get_altmetric_score(doi)
+    return {
+        'policy_count': altmetric.get('policy_count', 0),
+        'documents': [],
+        'countries': []
+    }
+
+Normalizasyon:
+
+Max Değer: 100 (varsayılan)
+Normalize_Skor = 100 × (ln(1 + policy_count) / ln(1 + 100))
+
+
+
+I_212: Politika Değişikliği Etkisi
+Değerlendirme Kriterleri:
+
+
+
+I_213: Politika Yapıcılarla İletişim
+
+
+I_214: Uluslararası Politika Etkisi
+Değerlendirme Kriterleri:
+
+
+
+I_221: Patent Atıfları
+API Entegrasyonu:
+
+def get_patent_citations(doi: str) -> dict:
+    """
+    Patent atıflarını Lens.org API'den al
+    """
+    import requests
+
+    url = "https://api.lens.org/scholarly/search"
+    headers = {
+        'Authorization': f'Bearer {LENS_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+
+    body = {
+        "query": {"match": {"doi": doi}},
+        "include": ["patent_citations"],
+        "size": 1
+    }
+
+    response = requests.post(url, headers=headers, json=body)
+
+    if response.status_code == 200:
+        data = response.json()
+        if data.get('data'):
+            return {
+                'patent_count': data['data'][0].get('patent_citation_count', 0),
+                'patents': data['data'][0].get('patent_citations', [])
+            }
+
+    return {'patent_count': 0, 'patents': []}
+
+Normalizasyon:
+
+Max Değer: 50 (varsayılan)
+Normalize_Skor = 100 × (ln(1 + patent_count) / ln(1 + 50))
+
+
+
+I_222: Endüstri İşbirliği
+Değerlendirme Kriterleri:
+
+
+
+I_223: Ticari Ürün/Hizmet Geliştirme
+Değerlendirme Kriterleri:
+
+
+
+I_224: Spin-off Şirket Oluşumu
+Veri Kaynakları:
+Teknoloji Transfer Ofisleri (TTO)
+Crunchbase
+LinkedIn
+
+
+
+I_231: Toplumsal Sorun Çözümü
+Değerlendirme Kriterleri:
+
+
+
+I_232: Kamu Sağlığı Etkisi
+
+
+I_233: Çevresel Sürdürülebilirlik
+
+
+6. D3: Negatif Etki ve Risk
+6.1 Boyut Özeti
+6.2 Alt Boyutlar ve Ağırlıklar
+6.3 Parametre Detayları
+
+
+I_311: Çevresel Zarar Potansiyeli
+Değerlendirme Kriterleri:
+
+
+
+I_312: Etik İhlal Riski
+
+
+I_313: Kötüye Kullanım Potansiyeli
+Dual-Use Değerlendirmesi:
+
+
+
+I_314 - I_319: Diğer Risk Parametreleri
+(Sosyal eşitsizlik, ekonomik zarar, sağlık riski, gizlilik ihlali, yanlış bilgi, teknolojik bağımlılık riskleri benzer formatta değerlendirilir.)
+
+
+
+7. D4: Etik ve Sorumluluk
+7.1 Boyut Özeti
+7.2 Parametre Detayları
+
+
+I_411: Etik Kurul Onayı
+Kontrol Listesi:
+
+
+
+I_412: Veri Şeffaflığı
+Değerlendirme Kriterleri:
+
+
+
+I_413 - I_416: Diğer Etik Parametreleri
+(Metodolojik şeffaflık, çıkar çatışması, açık erişim, tekrarlanabilirlik benzer formatta değerlendirilir.)
+
+
+
+8. D5-D16: Genişletilmiş Boyutlar
+8.1 Genel Bakış
+8.2 D5: Ekonomik Etki - Örnek Parametreler
+I_511: Doğrudan İstihdam Yaratma
+Veri Kaynakları:
+Şirket raporları
+LinkedIn iş ilanları
+Teknoloji Transfer Ofisleri
+
+Manuel Giriş Formu:
+
+┌─────────────────────────────────────────────────────────────┐
+│ I_511: Doğrudan İstihdam Yaratma                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Yaratılan İş Sayısı (FTE): [________]                       │
+│                                                             │
+│ İstihdam Türü:                                              │
+│ □ Ar-Ge pozisyonları                                        │
+│ □ Üretim pozisyonları                                       │
+│ □ Satış/Pazarlama                                           │
+│ □ Destek fonksiyonları                                      │
+│                                                             │
+│ Zaman Dilimi: [Dropdown: 1 yıl / 3 yıl / 5 yıl / 10 yıl]    │
+│                                                             │
+│ Kanıt Türü:                                                 │
+│ ○ Şirket raporu  ○ Basın açıklaması  ○ LinkedIn  ○ Tahmin   │
+│                                                             │
+│ Kanıt Dokümanı: [Dosya Yükle]                               │
+│                                                             │
+│ Güvenilirlik: ○ Düşük  ○ Orta  ○ Yüksek                     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+Normalizasyon:
+
+Max Değer: 10,000 FTE
+Normalize_Skor = 100 × (ln(1 + FTE) / ln(1 + 10000))
+
+
+
+I_521: Toplam Ekonomik Değer (TEV)
+Hesaplama Formülü:
+
+TEV = Gelir_Artışı + Maliyet_Tasarrufu + Verimlilik_Kazanımı
+
+Gelir_Artışı = Yeni_Ürün_Gelirleri + Lisans_Gelirleri
+Maliyet_Tasarrufu = Eski_Maliyet - Yeni_Maliyet
+Verimlilik_Kazanımı = Zaman_Tasarrufu × Saat_Ücreti × Çalışan_Sayısı
+
+
+
+KISIM C: HESAPLAMA METODOLOJİSİ
+
+
+9. Normalizasyon Fonksiyonları
+9.1 Logaritmik Normalizasyon
+Kullanım: Çarpık dağılımlı nicel veriler
+
+Matematiksel Formül:
+f(x) = 100 × (ln(1 + x) / ln(1 + x_max))
+
+Türev (Hassasiyet Analizi):
+f'(x) = 100 / ((1 + x) × ln(1 + x_max))
+
+Python Implementasyonu:
+
+import math
+from typing import Optional
+
+def logarithmic_normalize(
+    value: float,
+    max_value: float,
+    min_value: float = 0
+) -> float:
+    """
+    Logaritmik normalizasyon
+
+    Args:
+        value: Ham değer
+        max_value: Maksimum referans değer
+        min_value: Minimum değer (varsayılan 0)
+
+    Returns:
+        Normalize edilmiş skor (0-100)
+
+    Raises:
+        ValueError: Geçersiz girdi değerleri için
+    """
+    if value < min_value:
+        return 0.0
+
+    if max_value <= min_value:
+        raise ValueError("max_value, min_value'dan büyük olmalıdır")
+
+    # Değerleri kaydır (min_value = 0 olacak şekilde)
+    shifted_value = value - min_value
+    shifted_max = max_value - min_value
+
+    # Logaritmik normalizasyon
+    if shifted_value <= 0:
+        return 0.0
+
+    score = 100 * (math.log(1 + shifted_value) / math.log(1 + shifted_max))
+
+    return min(100.0, max(0.0, score))
+
+Varsayılan Max Değerler Tablosu:
+
+9.2 Lineer Normalizasyon
+Kullanım: Likert ölçeği ve sınırlı aralıklı veriler
+
+Matematiksel Formül:
+f(x) = 100 × (x - x_min) / (x_max - x_min)
+
+Python Implementasyonu:
+
+def linear_normalize(
+    value: float,
+    min_value: float = 1,
+    max_value: float = 5
+) -> float:
+    """
+    Lineer normalizasyon
+
+    Args:
+        value: Ham değer
+        min_value: Minimum değer (varsayılan 1)
+        max_value: Maksimum değer (varsayılan 5)
+
+    Returns:
+        Normalize edilmiş skor (0-100)
+    """
+    if max_value == min_value:
+        return 0.0
+
+    score = 100 * (value - min_value) / (max_value - min_value)
+
+    return min(100.0, max(0.0, score))
+
+Likert Dönüşüm Tablosu:
+
+9.3 İkili Normalizasyon
+Kullanım: Evet/Hayır göstergeleri
+
+Matematiksel Formül:
+f(x) = x × 100, x ∈ {0, 1}
+
+Python Implementasyonu:
+
+def binary_normalize(value: int) -> float:
+    """
+    İkili normalizasyon
+
+    Args:
+        value: 0 veya 1
+
+    Returns:
+        0 veya 100
+    """
+    return 100.0 if value == 1 else 0.0
+
+
+
+10. Ağırlıklandırma Sistemi
+10.1 Üç Seviyeli Ağırlıklandırma
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      AĞIRLIKLANDIRMA HİYERARŞİSİ                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SEVİYE 1: BOYUT AĞIRLIKLARI (W_D)                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ HIS = Σ(D_i × W_D_i)                                                │   │
+│  │                                                                     │   │
+│  │ Hızlı Mod:    W_D1=0.35, W_D2=0.35, W_D3=0.15, W_D4=0.15           │   │
+│  │ Kapsamlı Mod: W_D1=0.20, W_D2=0.20, ..., W_D16=0.02                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                  │
+│                                          ▼                                  │
+│  SEVİYE 2: ALT BOYUT AĞIRLIKLARI (W_SD)                                    │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ D_i = Σ(SD_j × W_SD_j)                                              │   │
+│  │                                                                     │   │
+│  │ Örnek D1: W_SD1.1=0.40, W_SD1.2=0.30, W_SD1.3=0.30                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                          │                                  │
+│                                          ▼                                  │
+│  SEVİYE 3: GÖSTERGE AĞIRLIKLARI (W_I)                                      │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ SD_j = Σ(I_k × W_I_k)                                               │   │
+│  │                                                                     │   │
+│  │ Örnek SD1.1: W_I111=0.40, W_I112=0.25, W_I113=0.20, W_I114=0.15    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+10.2 Hızlı Mod Ağırlık Tablosu
+10.3 Kapsamlı Mod Ağırlık Tablosu
+10.4 Ağırlık Hesaplama Formülleri
+Gösterge Skoru → Alt Boyut Skoru:
+SD_score = Σ(I_i × W_I_i) / Σ(W_I_i)
+
+Alt Boyut Skoru → Boyut Skoru:
+D_score = Σ(SD_j × W_SD_j) / Σ(W_SD_j)
+
+Boyut Skoru → HIS:
+HIS = Σ(D_k × W_D_k) / Σ(W_D_k)
+
+Not: D3 için (100 - D3) kullanılır
+
+
+
+11. HIS Hesaplama Formülleri
+11.1 Hızlı Mod
+Formül:
+RIS = (W_A × D1) + (W_S × D2)
+M_E = (D4 / 100)^k_E
+M_N = (1 - D3 / 100)^k_N
+HIS = RIS × M_E × M_N
+
+Parametreler:
+W_A = 0.35 (Akademik ağırlık)
+W_S = 0.40 (Sosyal ağırlık)
+k_E = 2 (Etik hassasiyet)
+k_N = 1.5 (Negatif etki hassasiyet)
+
+Python Implementasyonu:
+
+def calculate_his_quick_mode(
+    D1: float,
+    D2: float,
+    D3: float,
+    D4: float
+) -> dict:
+    """
+    Hızlı Mod HIS hesaplama
+
+    Args:
+        D1: Akademik Etki skoru (0-100)
+        D2: Toplumsal ve Pratik Etki skoru (0-100)
+        D3: Negatif Etki ve Risk skoru (0-100, yüksek = kötü)
+        D4: Etik ve Sorumluluk skoru (0-100)
+
+    Returns:
+        {
+            'his': float,
+            'ris': float,
+            'm_e': float,
+            'm_n': float,
+            'breakdown': dict
+        }
+    """
+    # Sabitler
+    W_A = 0.35
+    W_S = 0.40
+    k_E = 2
+    k_N = 1.5
+
+    # Ham Etki Skoru
+    RIS = (W_A * D1) + (W_S * D2)
+
+    # Etik Çarpanı
+    M_E = (D4 / 100) ** k_E
+
+    # Negatif Etki Çarpanı
+    M_N = (1 - D3 / 100) ** k_N
+
+    # Final HIS
+    HIS = RIS * M_E * M_N
+    HIS = min(100, max(0, HIS))
+
+    return {
+        'his': round(HIS, 2),
+        'ris': round(RIS, 2),
+        'm_e': round(M_E, 4),
+        'm_n': round(M_N, 4),
+        'breakdown': {
+            'academic_contribution': round(W_A * D1, 2),
+            'social_contribution': round(W_S * D2, 2),
+            'ethics_penalty': round((1 - M_E) * 100, 2),
+            'negative_penalty': round((1 - M_N) * 100, 2)
+        }
+    }
+
+11.2 Kapsamlı Mod
+Formül:
+Base_HIS = Σ(D_i × W_i) / Σ(W_i)
+Cascade_HIS = Base_HIS × Cascade_Multiplier
+Final_HIS = min(Cascade_HIS, 100)
+
+Python Implementasyonu:
+
+def calculate_his_comprehensive_mode(
+    dimension_scores: dict,
+    cascade_multiplier: float = 1.0
+) -> dict:
+    """
+    Kapsamlı Mod HIS hesaplama
+
+    Args:
+        dimension_scores: D1-D16 skorları
+        cascade_multiplier: Cascade çarpanı
+
+    Returns:
+        Detaylı hesaplama sonuçları
+    """
+    # Ağırlıklar
+    weights = {
+        'D1': 0.20, 'D2': 0.20, 'D3': 0.10, 'D4': 0.10,
+        'D5': 0.08, 'D6': 0.08, 'D7': 0.06, 'D8': 0.04,
+        'D9': 0.04, 'D10': 0.03, 'D11': 0.03, 'D12': 0.02,
+        'D13': 0.02, 'D14': 0.02, 'D15': 0.02, 'D16': 0.02
+    }
+
+    weighted_sum = 0
+    total_weight = 0
+    contributions = {}
+
+    for code, weight in weights.items():
+        score = dimension_scores.get(code)
+        if score is not None:
+            # D3 ters çevrilir
+            adjusted = (100 - score) if code == 'D3' else score
+            contribution = adjusted * weight
+            weighted_sum += contribution
+            total_weight += weight
+            contributions[code] = {
+                'raw_score': score,
+                'adjusted_score': adjusted,
+                'weight': weight,
+                'contribution': round(contribution, 2)
+            }
+
+    base_his = weighted_sum / total_weight if total_weight > 0 else 0
+    cascade_his = base_his * cascade_multiplier
+    final_his = min(100, max(0, cascade_his))
+
+    return {
+        'his': round(final_his, 2),
+        'base_his': round(base_his, 2),
+        'cascade_multiplier': round(cascade_multiplier, 4),
+        'contributions': contributions
+    }
+
+
+
+12. Zincirleme Etki ve Çarpan Katsayıları
+12.1 5 Katmanlı Cascade Modeli
+Decay Formülü:
+Level_n_Effect = Base_Effect × (0.85)^(n-1)
+
+Python Implementasyonu:
+
+def calculate_cascade_levels(base_score: float) -> dict:
+    """
+    5 katmanlı cascade hesaplama
+    """
+    decay_rate = 0.85
+
+    levels = {}
+    cumulative = 0
+
+    for level in range(1, 6):
+        decay = decay_rate ** (level - 1)
+        effect = base_score * decay
+        cumulative += effect
+
+        levels[f'level_{level}'] = {
+            'decay_factor': round(decay, 4),
+            'effect': round(effect, 2),
+            'cumulative': round(cumulative, 2)
+        }
+
+    return levels
+
+12.2 Çarpan Katsayıları
+Ekonomik Çarpan
+def calculate_economic_multiplier(D5: float) -> float:
+    """
+    Ekonomik çarpan: 1.5x - 5.0x
+
+    Formül: 1.5 + (D5 / 100) × 3.5
+    """
+    return 1.5 + (D5 / 100) * 3.5
+
+Sosyal Çarpan
+def calculate_social_multiplier(D2: float, D10: float) -> float:
+    """
+    Sosyal çarpan: 2.0x - 10.0x
+
+    Formül: 2.0 + (avg / 100) × 8.0
+    """
+    avg = (D2 + D10) / 2
+    return 2.0 + (avg / 100) * 8.0
+
+Bilimsel Çarpan
+def calculate_scientific_multiplier(D1: float, D9: float) -> float:
+    """
+    Bilimsel çarpan: 10x - 1000x (logaritmik)
+
+    Formül: 10 × 10^((avg / 100) × 2)
+    """
+    import math
+    avg = (D1 + D9) / 2
+    return 10 * math.pow(10, (avg / 100) * 2)
+
+Çevresel Çarpan
+def calculate_environmental_multiplier(D7: float) -> float:
+    """
+    Çevresel çarpan: 1.5x - 4.0x
+
+    Formül: 1.5 + (D7 / 100) × 2.5
+    """
+    return 1.5 + (D7 / 100) * 2.5
+
+12.3 Toplam Cascade Çarpanı
+def calculate_total_cascade_multiplier(dimension_scores: dict) -> dict:
+    """
+    Toplam cascade çarpanı hesaplama
+    """
+    D1 = dimension_scores.get('D1', 0)
+    D2 = dimension_scores.get('D2', 0)
+    D5 = dimension_scores.get('D5', 0)
+    D7 = dimension_scores.get('D7', 0)
+    D9 = dimension_scores.get('D9', 0)
+    D10 = dimension_scores.get('D10', 0)
+    D12 = dimension_scores.get('D12', 0)
+    D15 = dimension_scores.get('D15', 0)
+
+    # Bireysel çarpanlar
+    economic = calculate_economic_multiplier(D5)
+    social = calculate_social_multiplier(D2, D10)
+    scientific = calculate_scientific_multiplier(D1, D9)
+    environmental = calculate_environmental_multiplier(D7)
+
+    # Ağ etkisi
+    network_avg = (D9 + D12 + D15) / 3
+    network_effect = ((network_avg / 100) ** 1.5) * 100
+
+    # Toplam cascade
+    cascade = (
+        (economic * 0.25) +
+        (social * 0.25) +
+        (min(scientific, 100) * 0.01) +
+        (environmental * 0.15) +
+        ((1 + network_effect / 100) * 0.34)
+    )
+
+    return {
+        'total': min(cascade, 10.0),
+        'economic': economic,
+        'social': social,
+        'scientific': scientific,
+        'environmental': environmental,
+        'network_effect': network_effect
+    }
+
+
+
+KISIM D: UYGULAMA
+
+
+13. API Entegrasyon Rehberi
+13.1 API Özet Tablosu
+13.2 API Wrapper Sınıfı
+import requests
+from typing import Optional, Dict, Any
+from functools import lru_cache
+import time
+
+class AcademicAPIClient:
+    """
+    Akademik veri API'leri için birleşik istemci
+    """
+
+    def __init__(self, config: Dict[str, str]):
+        self.config = config
+        self.session = requests.Session()
+        self._rate_limits = {}
+
+    def _rate_limit(self, api_name: str, limit: int, period: int):
+        """Rate limiting decorator"""
+        current_time = time.time()
+        if api_name in self._rate_limits:
+            last_time, count = self._rate_limits[api_name]
+            if current_time - last_time < period:
+                if count >= limit:
+                    time.sleep(period - (current_time - last_time))
+                    self._rate_limits[api_name] = (time.time(), 1)
+                else:
+                    self._rate_limits[api_name] = (last_time, count + 1)
+            else:
+                self._rate_limits[api_name] = (current_time, 1)
+        else:
+            self._rate_limits[api_name] = (current_time, 1)
+
+    @lru_cache(maxsize=1000)
+    def get_semantic_scholar_data(self, doi: str) -> Dict[str, Any]:
+        """Semantic Scholar'dan veri çek"""
+        self._rate_limit('semantic_scholar', 100, 300)
+
+        url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}"
+        params = {
+            'fields': 'citationCount,influentialCitationCount,year,'
+                     'fieldsOfStudy,references,citations'
+        }
+        headers = {}
+        if self.config.get('SEMANTIC_SCHOLAR_API_KEY'):
+            headers['x-api-key'] = self.config['SEMANTIC_SCHOLAR_API_KEY']
+
+        response = self.session.get(url, params=params, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()
+        return {}
+
+    @lru_cache(maxsize=1000)
+    def get_altmetric_data(self, doi: str) -> Dict[str, Any]:
+        """Altmetric'ten veri çek"""
+        self._rate_limit('altmetric', 1000, 86400)
+
+        url = f"https://api.altmetric.com/v1/doi/{doi}"
+        headers = {}
+        if self.config.get('ALTMETRIC_API_KEY'):
+            headers['Authorization'] = f"Bearer {self.config['ALTMETRIC_API_KEY']}"
+
+        response = self.session.get(url, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()
+        return {}
+
+    @lru_cache(maxsize=1000)
+    def get_lens_patent_data(self, doi: str) -> Dict[str, Any]:
+        """Lens.org'dan patent verisi çek"""
+        self._rate_limit('lens', 50, 60)
+
+        url = "https://api.lens.org/scholarly/search"
+        headers = {
+            'Authorization': f"Bearer {self.config.get('LENS_API_KEY', '')}",
+            'Content-Type': 'application/json'
+        }
+        body = {
+            "query": {"match": {"doi": doi}},
+            "include": ["patent_citations"],
+            "size": 1
+        }
+
+        response = self.session.post(url, headers=headers, json=body)
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('data'):
+                return data['data'][0]
+        return {}
+
+    def get_all_data(self, doi: str) -> Dict[str, Any]:
+        """Tüm API'lerden veri topla"""
+        return {
+            'semantic_scholar': self.get_semantic_scholar_data(doi),
+            'altmetric': self.get_altmetric_data(doi),
+            'lens': self.get_lens_patent_data(doi)
+        }
+
+
+
+14. Manuel Veri Giriş Formları
+14.1 Form Şeması (JSON Schema)
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HIS Değerlendirme Formu",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "doi": {"type": "string", "pattern": "^10\\.\\d{4,}/.*$"},
+        "evaluator": {"type": "string"},
+        "date": {"type": "string", "format": "date"},
+        "mode": {"type": "string", "enum": ["quick", "comprehensive"]}
+      },
+      "required": ["doi", "evaluator", "date", "mode"]
+    },
+    "indicators": {
+      "type": "object",
+      "patternProperties": {
+        "^I_\\d{3}$": {
+          "type": "object",
+          "properties": {
+            "value": {"type": "number"},
+            "source": {"type": "string"},
+            "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+            "justification": {"type": "string", "minLength": 50},
+            "evidence_url": {"type": "string", "format": "uri"}
+          },
+          "required": ["value", "source"]
+        }
+      }
+    }
+  },
+  "required": ["metadata", "indicators"]
+}
+
+14.2 HTML Form Şablonu
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>HIS Değerlendirme Formu</title>
+    <style>
+        .form-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .indicator-group { margin: 10px 0; padding: 10px; background: #f9f9f9; }
+        .likert-scale { display: flex; gap: 10px; }
+        .likert-option { display: flex; align-items: center; gap: 5px; }
+        .required::after { content: " *"; color: red; }
+        .help-text { font-size: 0.9em; color: #666; }
+        .validation-error { color: red; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Bütünsel Etki Skoru (HIS) Değerlendirme Formu</h1>
+
+    <form id="his-form">
+        <!-- Metadata -->
+        <div class="form-section">
+            <h2>Makale Bilgileri</h2>
+            <div>
+                <label class="required">DOI:</label>
+                <input type="text" name="doi" pattern="^10\.\d{4,}/.*$" required>
+            </div>
+            <div>
+                <label class="required">Değerlendiren:</label>
+                <input type="text" name="evaluator" required>
+            </div>
+            <div>
+                <label class="required">Mod:</label>
+                <select name="mode" required>
+                    <option value="quick">Hızlı Mod (37 Gösterge)</option>
+                    <option value="comprehensive">Kapsamlı Mod (193 Gösterge)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- D1: Akademik Etki -->
+        <div class="form-section">
+            <h2>D1: Akademik Etki</h2>
+
+            <!-- I_111 -->
+            <div class="indicator-group">
+                <h3>I_111: Normalize Edilmiş Atıf Skoru</h3>
+                <p class="help-text">Makalenin aldığı atıf sayısı</p>
+
+                <div>
+                    <label class="required">Atıf Sayısı:</label>
+                    <input type="number" name="I_111_value" min="0" required>
+                </div>
+                <div>
+                    <label>Veri Kaynağı:</label>
+                    <select name="I_111_source">
+                        <option value="semantic_scholar">Semantic Scholar</option>
+                        <option value="scopus">Scopus</option>
+                        <option value="wos">Web of Science</option>
+                        <option value="google_scholar">Google Scholar</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Güvenilirlik:</label>
+                    <select name="I_111_confidence">
+                        <option value="high">Yüksek</option>
+                        <option value="medium">Orta</option>
+                        <option value="low">Düşük</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- I_112 -->
+            <div class="indicator-group">
+                <h3>I_112: Atıf Yapan Kaynakların Kalitesi</h3>
+                <p class="help-text">Atıf yapan dergilerin ve yazarların kalitesi</p>
+
+                <div class="likert-scale">
+                    <label class="likert-option">
+                        <input type="radio" name="I_112_value" value="1" required>
+                        <span>1 - Çok Düşük</span>
+                    </label>
+                    <label class="likert-option">
+                        <input type="radio" name="I_112_value" value="2">
+                        <span>2 - Düşük</span>
+                    </label>
+                    <label class="likert-option">
+                        <input type="radio" name="I_112_value" value="3">
+                        <span>3 - Orta</span>
+                    </label>
+                    <label class="likert-option">
+                        <input type="radio" name="I_112_value" value="4">
+                        <span>4 - Yüksek</span>
+                    </label>
+                    <label class="likert-option">
+                        <input type="radio" name="I_112_value" value="5">
+                        <span>5 - Çok Yüksek</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="required">Gerekçe (min. 50 karakter):</label>
+                    <textarea name="I_112_justification" minlength="50" required></textarea>
+                </div>
+            </div>
+
+            <!-- Diğer göstergeler benzer şekilde... -->
+        </div>
+
+        <button type="submit">Değerlendirmeyi Kaydet</button>
+    </form>
+
+    <script>
+        document.getElementById('his-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            // Validasyon
+            const errors = validateForm(data);
+            if (errors.length > 0) {
+                alert('Hatalar:\n' + errors.join('\n'));
+                return;
+            }
+
+            // Gönder
+            console.log('Form data:', data);
+            // API'ye gönderme kodu...
+        });
+
+        function validateForm(data) {
+            const errors = [];
+
+            // DOI formatı
+            if (!/^10\.\d{4,}\/.*$/.test(data.doi)) {
+                errors.push('Geçersiz DOI formatı');
+            }
+
+            // Gerekçe uzunluğu
+            Object.keys(data).forEach(key => {
+                if (key.endsWith('_justification') && data[key].length < 50) {
+                    errors.push(`${key}: Minimum 50 karakter gerekli`);
+                }
+            });
+
+            return errors;
+        }
+    </script>
+</body>
+</html>
+
+
+
+15. Doğrulama ve Kalite Kontrol
+15.1 Veri Doğrulama Kontrol Listesi
+15.2 Doğrulama Fonksiyonları
+from typing import List, Dict, Any, Tuple
+import statistics
+
+def validate_evaluation(data: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    """
+    Değerlendirme verilerini doğrula
+
+    Returns:
+        (is_valid, error_messages)
+    """
+    errors = []
+
+    # DOI doğrulama
+    if not validate_doi(data.get('metadata', {}).get('doi', '')):
+        errors.append("Geçersiz DOI formatı")
+
+    # Gösterge değerleri doğrulama
+    for code, indicator in data.get('indicators', {}).items():
+        value = indicator.get('value')
+
+        # Likert kontrolü
+        if code.startswith('I_') and is_likert_indicator(code):
+            if not (1 <= value <= 5):
+                errors.append(f"{code}: Likert değeri 1-5 arasında olmalı")
+
+        # İkili kontrol
+        if is_binary_indicator(code):
+            if value not in [0, 1]:
+                errors.append(f"{code}: İkili değer 0 veya 1 olmalı")
+
+        # Gerekçe kontrolü
+        if requires_justification(code):
+            justification = indicator.get('justification', '')
+            if len(justification) < 50:
+                errors.append(f"{code}: Gerekçe minimum 50 karakter olmalı")
+
+    return len(errors) == 0, errors
+
+
+def check_inter_rater_reliability(ratings: List[Dict[str, float]]) -> Dict[str, float]:
+    """
+    Uzmanlar arası güvenilirlik kontrolü (ICC)
+    """
+    if len(ratings) < 2:
+        return {'icc': 1.0, 'status': 'insufficient_raters'}
+
+    # Her gösterge için ICC hesapla
+    icc_scores = {}
+
+    for indicator_code in ratings[0].keys():
+        values = [r.get(indicator_code) for r in ratings if r.get(indicator_code) is not None]
+
+        if len(values) >= 2:
+            # Basitleştirilmiş ICC hesaplama
+            mean_val = statistics.mean(values)
+            variance = statistics.variance(values) if len(values) > 1 else 0
+
+            # ICC yaklaşımı
+            if variance > 0:
+                icc = 1 - (variance / (mean_val ** 2 + variance))
+            else:
+                icc = 1.0
+
+            icc_scores[indicator_code] = max(0, min(1, icc))
+
+    overall_icc = statistics.mean(icc_scores.values()) if icc_scores else 0
+
+    return {
+        'overall_icc': overall_icc,
+        'indicator_icc': icc_scores,
+        'status': 'good' if overall_icc >= 0.7 else 'needs_review'
+    }
+
+
+def detect_outliers(scores: Dict[str, float]) -> List[str]:
+    """
+    Aykırı değer tespiti (Z-score)
+    """
+    outliers = []
+
+    values = list(scores.values())
+    if len(values) < 3:
+        return outliers
+
+    mean = statistics.mean(values)
+    stdev = statistics.stdev(values)
+
+    if stdev == 0:
+        return outliers
+
+    for code, value in scores.items():
+        z_score = abs((value - mean) / stdev)
+        if z_score > 3:
+            outliers.append(code)
+
+    return outliers
+
+15.3 Sonuç Aralık Doğrulama
+
+
+16. Kod Uygulamaları
+16.1 Tam Python Modülü
+#!/usr/bin/env python3
+"""
+HIS (Holistic Impact Score) Tam Hesaplama Modülü
+Versiyon: 3.0
+
+Bu modül, Akademik Makale Etki Değerlendirmesi Sistemi'nin
+tüm hesaplama fonksiyonlarını içerir.
+"""
+
+import math
+import json
+from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass, field
+from enum import Enum
+
+# ============================================================
+# VERİ YAPILARI
+# ============================================================
+
+class DataType(Enum):
+    """Veri türleri"""
+    QUANTITATIVE_AUTO = "quantitative_auto"
+    QUANTITATIVE_MANUAL = "quantitative_manual"
+    QUALITATIVE_EXPERT = "qualitative_expert"
+    QUALITATIVE_RESEARCHER = "qualitative_researcher"
+    BINARY = "binary"
+
+
+class NormalizationType(Enum):
+    """Normalizasyon türleri"""
+    LOGARITHMIC = "logarithmic"
+    LINEAR = "linear"
+    BINARY = "binary"
+
+
+@dataclass
+class Indicator:
+    """Gösterge tanımı"""
+    code: str
+    name: str
+    dimension: str
+    subdimension: str
+    weight: float
+    data_type: DataType
+    normalization: NormalizationType
+    max_value: Optional[float] = None
+    min_value: float = 0
+    evaluator: str = "system"
+    cascade_level: Optional[int] = None
+    multiplier_type: Optional[str] = None
+
+
+@dataclass
+class EvaluationResult:
+    """Değerlendirme sonucu"""
+    his: float
+    base_his: float
+    cascade_multiplier: float
+    dimension_scores: Dict[str, float]
+    subdimension_scores: Dict[str, float]
+    indicator_scores: Dict[str, float]
+    cascade_levels: Dict[str, float]
+    multipliers: Dict[str, float]
+    validation_status: str
+    warnings: List[str] = field(default_factory=list)
+
+
+# ============================================================
+# GÖSTERGE TANIMLARI
+# ============================================================
+
+INDICATORS = {
+    # D1: Akademik Etki
+    'I_111': Indicator('I_111', 'Normalize Edilmiş Atıf Skoru', 'D1', 'SD1.1', 0.40,
+                       DataType.QUANTITATIVE_AUTO, NormalizationType.LOGARITHMIC,
+                       max_value=None, evaluator='api'),
+    'I_112': Indicator('I_112', 'Atıf Yapan Kaynakların Kalitesi', 'D1', 'SD1.1', 0.25,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='academic_panel'),
+    'I_113': Indicator('I_113', 'Disiplinlerarası Atıf Çeşitliliği', 'D1', 'SD1.1', 0.20,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='academic_panel'),
+    'I_114': Indicator('I_114', 'Atıf Bağlamı', 'D1', 'SD1.1', 0.15,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='academic_panel'),
+    'I_121': Indicator('I_121', 'Altmetric Attention Score', 'D1', 'SD1.2', 0.35,
+                       DataType.QUANTITATIVE_AUTO, NormalizationType.LOGARITHMIC,
+                       max_value=1000, evaluator='api'),
+    'I_122': Indicator('I_122', 'Medya Görünürlüğü ve Kalitesi', 'D1', 'SD1.2', 0.25,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='community_panel'),
+    'I_123': Indicator('I_123', 'Wikipedia Etkisi', 'D1', 'SD1.2', 0.20,
+                       DataType.BINARY, NormalizationType.BINARY,
+                       evaluator='api'),
+    'I_124': Indicator('I_124', 'Sosyal Medya Tartışma Derinliği', 'D1', 'SD1.2', 0.20,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='community_panel'),
+    'I_131': Indicator('I_131', 'Paradigma Değişimi Potansiyeli', 'D1', 'SD1.3', 0.40,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='academic_panel'),
+    'I_132': Indicator('I_132', 'Yeni Araştırma Alanı Yaratma', 'D1', 'SD1.3', 0.35,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='academic_panel'),
+    'I_133': Indicator('I_133', 'Metodolojik/Teorik Yenilik', 'D1', 'SD1.3', 0.25,
+                       DataType.QUALITATIVE_EXPERT, NormalizationType.LINEAR,
+                       max_value=5, min_value=1, evaluator='academic_panel'),
+
+    # D2: Toplumsal ve Pratik Etki (örnek)
+    'I_211': Indicator('I_211', 'Politika Dokümanlarında Atıf', 'D2', 'SD2.1', 0.35,
+                       DataType.QUANTITATIVE_AUTO, NormalizationType.LOGARITHMIC,
+                       max_value=100, evaluator='api'),
+    'I_221': Indicator('I_221', 'Patent Atıfları', 'D2', 'SD2.2', 0.35,
+                       DataType.QUANTITATIVE_AUTO, NormalizationType.LOGARITHMIC,
+                       max_value=50, evaluator='api'),
+
+    # D5: Ekonomik Etki (örnek)
+    'I_511': Indicator('I_511', 'Doğrudan İstihdam Yaratma', 'D5', 'SD5.1', 0.30,
+                       DataType.QUANTITATIVE_MANUAL, NormalizationType.LOGARITHMIC,
+                       max_value=10000, evaluator='sector_panel',
+                       cascade_level=1, multiplier_type='economic'),
+    'I_521': Indicator('I_521', 'Toplam Ekonomik Değer', 'D5', 'SD5.2', 0.40,
+                       DataType.QUANTITATIVE_MANUAL, NormalizationType.LOGARITHMIC,
+                       max_value=1000000000, evaluator='sector_panel',
+                       cascade_level=1, multiplier_type='economic'),
+}
+
+# Ağırlık tanımları
+DIMENSION_WEIGHTS_QUICK = {'D1': 0.35, 'D2': 0.35, 'D3': 0.15, 'D4': 0.15}
+
+DIMENSION_WEIGHTS_COMPREHENSIVE = {
+    'D1': 0.20, 'D2': 0.20, 'D3': 0.10, 'D4': 0.10,
+    'D5': 0.08, 'D6': 0.08, 'D7': 0.06, 'D8': 0.04,
+    'D9': 0.04, 'D10': 0.03, 'D11': 0.03, 'D12': 0.02,
+    'D13': 0.02, 'D14': 0.02, 'D15': 0.02, 'D16': 0.02
+}
+
+SUBDIMENSION_WEIGHTS = {
+    'D1': {'SD1.1': 0.40, 'SD1.2': 0.30, 'SD1.3': 0.30},
+    'D2': {'SD2.1': 0.35, 'SD2.2': 0.35, 'SD2.3': 0.30},
+    'D3': {'SD3.1': 0.35, 'SD3.2': 0.35, 'SD3.3': 0.30},
+    'D4': {'SD4.1': 0.50, 'SD4.2': 0.50},
+    # ... diğer boyutlar
+}
+
+
+# ============================================================
+# NORMALİZASYON FONKSİYONLARI
+# ============================================================
+
+def normalize_logarithmic(value: float, max_value: float, min_value: float = 0) -> float:
+    """
+    Logaritmik normalizasyon
+
+    Formül: 100 × (ln(1 + x) / ln(1 + max))
+    """
+    if value <= min_value:
+        return 0.0
+    if max_value <= min_value:
+        return 0.0
+
+    shifted_value = value - min_value
+    shifted_max = max_value - min_value
+
+    score = 100 * (math.log(1 + shifted_value) / math.log(1 + shifted_max))
+    return min(100.0, max(0.0, score))
+
+
+def normalize_linear(value: float, max_value: float = 5, min_value: float = 1) -> float:
+    """
+    Lineer normalizasyon
+
+    Formül: 100 × (x - min) / (max - min)
+    """
+    if max_value == min_value:
+        return 0.0
+
+    score = 100 * (value - min_value) / (max_value - min_value)
+    return min(100.0, max(0.0, score))
+
+
+def normalize_binary(value: int) -> float:
+    """
+    İkili normalizasyon
+
+    Formül: x × 100
+    """
+    return 100.0 if value == 1 else 0.0
+
+
+def normalize_value(value: float, indicator: Indicator) -> float:
+    """
+    Gösterge türüne göre normalizasyon uygula
+    """
+    if indicator.normalization == NormalizationType.LOGARITHMIC:
+        return normalize_logarithmic(value, indicator.max_value or 100, indicator.min_value)
+    elif indicator.normalization == NormalizationType.LINEAR:
+        return normalize_linear(value, indicator.max_value or 5, indicator.min_value)
+    elif indicator.normalization == NormalizationType.BINARY:
+        return normalize_binary(int(value))
+    else:
+        return value
+
+
+# ============================================================
+# SKOR HESAPLAMA FONKSİYONLARI
+# ============================================================
+
+def calculate_subdimension_score(
+    indicator_scores: Dict[str, float],
+    subdimension: str
+) -> float:
+    """
+    Alt boyut skoru hesapla
+    """
+    relevant_indicators = {
+        code: ind for code, ind in INDICATORS.items()
+        if ind.subdimension == subdimension
+    }
+
+    if not relevant_indicators:
+        return 0.0
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    for code, indicator in relevant_indicators.items():
+        if code in indicator_scores:
+            weighted_sum += indicator_scores[code] * indicator.weight
+            total_weight += indicator.weight
+
+    return weighted_sum / total_weight if total_weight > 0 else 0.0
+
+
+def calculate_dimension_score(
+    subdimension_scores: Dict[str, float],
+    dimension: str
+) -> float:
+    """
+    Boyut skoru hesapla
+    """
+    weights = SUBDIMENSION_WEIGHTS.get(dimension, {})
+
+    if not weights:
+        return 0.0
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    for subdim, weight in weights.items():
+        if subdim in subdimension_scores:
+            weighted_sum += subdimension_scores[subdim] * weight
+            total_weight += weight
+
+    return weighted_sum / total_weight if total_weight > 0 else 0.0
+
+
+def calculate_his_quick(dimension_scores: Dict[str, float]) -> Dict[str, Any]:
+    """
+    Hızlı Mod HIS hesaplama
+    """
+    D1 = dimension_scores.get('D1', 0)
+    D2 = dimension_scores.get('D2', 0)
+    D3 = dimension_scores.get('D3', 0)
+    D4 = dimension_scores.get('D4', 0)
+
+    W_A, W_S = 0.35, 0.40
+    k_E, k_N = 2, 1.5
+
+    RIS = (W_A * D1) + (W_S * D2)
+    M_E = (D4 / 100) ** k_E
+    M_N = (1 - D3 / 100) ** k_N
+
+    HIS = RIS * M_E * M_N
+    HIS = min(100, max(0, HIS))
+
+    return {
+        'his': round(HIS, 2),
+        'ris': round(RIS, 2),
+        'm_e': round(M_E, 4),
+        'm_n': round(M_N, 4),
+        'mode': 'quick'
+    }
+
+
+def calculate_his_comprehensive(
+    dimension_scores: Dict[str, float],
+    cascade_multiplier: float = 1.0
+) -> Dict[str, Any]:
+    """
+    Kapsamlı Mod HIS hesaplama
+    """
+    weights = DIMENSION_WEIGHTS_COMPREHENSIVE
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    for code, weight in weights.items():
+        score = dimension_scores.get(code)
+        if score is not None:
+            adjusted = (100 - score) if code == 'D3' else score
+            weighted_sum += adjusted * weight
+            total_weight += weight
+
+    base_his = weighted_sum / total_weight if total_weight > 0 else 0
+    cascade_his = base_his * cascade_multiplier
+    final_his = min(100, max(0, cascade_his))
+
+    return {
+        'his': round(final_his, 2),
+        'base_his': round(base_his, 2),
+        'cascade_multiplier': round(cascade_multiplier, 4),
+        'mode': 'comprehensive'
+    }
+
+
+# ============================================================
+# CASCADE VE ÇARPAN HESAPLAMALARI
+# ============================================================
+
+def calculate_cascade_levels(base_score: float) -> Dict[str, Dict[str, float]]:
+    """
+    5 katmanlı cascade hesaplama
+    """
+    decay_rate = 0.85
+    levels = {}
+    cumulative = 0.0
+
+    for level in range(1, 6):
+        decay = decay_rate ** (level - 1)
+        effect = base_score * decay
+        cumulative += effect
+
+        levels[f'level_{level}'] = {
+            'decay_factor': round(decay, 4),
+            'effect': round(effect, 2),
+            'cumulative': round(cumulative, 2)
+        }
+
+    return levels
+
+
+def calculate_economic_multiplier(D5: float) -> float:
+    """Ekonomik çarpan: 1.5x - 5.0x"""
+    return 1.5 + (D5 / 100) * 3.5
+
+
+def calculate_social_multiplier(D2: float, D10: float) -> float:
+    """Sosyal çarpan: 2.0x - 10.0x"""
+    avg = (D2 + D10) / 2
+    return 2.0 + (avg / 100) * 8.0
+
+
+def calculate_scientific_multiplier(D1: float, D9: float) -> float:
+    """Bilimsel çarpan: 10x - 1000x"""
+    avg = (D1 + D9) / 2
+    return 10 * math.pow(10, (avg / 100) * 2)
+
+
+def calculate_environmental_multiplier(D7: float) -> float:
+    """Çevresel çarpan: 1.5x - 4.0x"""
+    return 1.5 + (D7 / 100) * 2.5
+
+
+def calculate_network_effect(D9: float, D12: float, D15: float) -> float:
+    """Ağ etkisi skoru"""
+    avg = (D9 + D12 + D15) / 3
+    return ((avg / 100) ** 1.5) * 100
+
+
+def calculate_total_cascade_multiplier(dimension_scores: Dict[str, float]) -> Dict[str, float]:
+    """
+    Toplam cascade çarpanı hesaplama
+    """
+    D1 = dimension_scores.get('D1', 0)
+    D2 = dimension_scores.get('D2', 0)
+    D5 = dimension_scores.get('D5', 0)
+    D7 = dimension_scores.get('D7', 0)
+    D9 = dimension_scores.get('D9', 0)
+    D10 = dimension_scores.get('D10', 0)
+    D12 = dimension_scores.get('D12', 0)
+    D15 = dimension_scores.get('D15', 0)
+
+    economic = calculate_economic_multiplier(D5)
+    social = calculate_social_multiplier(D2, D10)
+    scientific = calculate_scientific_multiplier(D1, D9)
+    environmental = calculate_environmental_multiplier(D7)
+    network = calculate_network_effect(D9, D12, D15)
+
+    cascade = (
+        (economic * 0.25) +
+        (social * 0.25) +
+        (min(scientific, 100) * 0.01) +
+        (environmental * 0.15) +
+        ((1 + network / 100) * 0.34)
+    )
+
+    return {
+        'total': min(cascade, 10.0),
+        'economic': round(economic, 2),
+        'social': round(social, 2),
+        'scientific': round(scientific, 2),
+        'environmental': round(environmental, 2),
+        'network_effect': round(network, 2)
+    }
+
+
+# ============================================================
+# TAM DEĞERLENDİRME
+# ============================================================
+
+def full_evaluation(
+    raw_values: Dict[str, float],
+    mode: str = 'comprehensive'
+) -> EvaluationResult:
+    """
+    Tam değerlendirme işlemi
+
+    Args:
+        raw_values: Ham gösterge değerleri
+        mode: 'quick' veya 'comprehensive'
+
+    Returns:
+        EvaluationResult
+    """
+    warnings = []
+
+    # 1. Normalizasyon
+    indicator_scores = {}
+    for code, value in raw_values.items():
+        if code in INDICATORS:
+            indicator = INDICATORS[code]
+            normalized = normalize_value(value, indicator)
+            indicator_scores[code] = normalized
+        else:
+            warnings.append(f"Bilinmeyen gösterge: {code}")
+
+    # 2. Alt boyut skorları
+    subdimension_scores = {}
+    subdimensions = set(ind.subdimension for ind in INDICATORS.values())
+    for subdim in subdimensions:
+        subdimension_scores[subdim] = calculate_subdimension_score(indicator_scores, subdim)
+
+    # 3. Boyut skorları
+    dimension_scores = {}
+    dimensions = set(ind.dimension for ind in INDICATORS.values())
+    for dim in dimensions:
+        dimension_scores[dim] = calculate_dimension_score(subdimension_scores, dim)
+
+    # 4. HIS hesaplama
+    if mode == 'quick':
+        his_result = calculate_his_quick(dimension_scores)
+        cascade_multiplier = 1.0
+        cascade_levels = {}
+        multipliers = {}
+    else:
+        multipliers = calculate_total_cascade_multiplier(dimension_scores)
+        cascade_multiplier = multipliers['total']
+        his_result = calculate_his_comprehensive(dimension_scores, cascade_multiplier)
+
+        # Cascade seviyeleri
+        base_score = sum(
+            (100 - dimension_scores.get('D3', 0)) if d == 'D3' else dimension_scores.get(d, 0)
+            for d in DIMENSION_WEIGHTS_COMPREHENSIVE.keys()
+        ) / len(DIMENSION_WEIGHTS_COMPREHENSIVE)
+        cascade_levels = calculate_cascade_levels(base_score)
+
+    # 5. Doğrulama
+    validation_status = 'valid'
+    if his_result['his'] < 0 or his_result['his'] > 100:
+        validation_status = 'invalid'
+        warnings.append("HIS değeri geçersiz aralıkta")
+
+    return EvaluationResult(
+        his=his_result['his'],
+        base_his=his_result.get('base_his', his_result['his']),
+        cascade_multiplier=cascade_multiplier,
+        dimension_scores=dimension_scores,
+        subdimension_scores=subdimension_scores,
+        indicator_scores=indicator_scores,
+        cascade_levels=cascade_levels,
+        multipliers=multipliers,
+        validation_status=validation_status,
+        warnings=warnings
+    )
+
+
+# ============================================================
+# ÖRNEK KULLANIM
+# ============================================================
+
+if __name__ == '__main__':
+    # Örnek ham değerler
+    raw_values = {
+        # D1
+        'I_111': 150,  # Atıf sayısı
+        'I_112': 4,    # Likert
+        'I_113': 3,    # Likert
+        'I_114': 4,    # Likert
+        'I_121': 45,   # Altmetric
+        'I_122': 3,    # Likert
+        'I_123': 1,    # Binary
+        'I_124': 3,    # Likert
+        'I_131': 4,    # Likert
+        'I_132': 3,    # Likert
+        'I_133': 4,    # Likert
+
+        # D2
+        'I_211': 5,    # Politika atıfları
+        'I_221': 8,    # Patent atıfları
+
+        # D5
+        'I_511': 50,   # FTE
+        'I_521': 5000000,  # USD
+    }
+
+    # Hızlı mod
+    print("=== HIZLI MOD ===")
+    quick_result = full_evaluation(raw_values, 'quick')
+    print(f"HIS: {quick_result.his}")
+    print(f"Boyut Skorları: {quick_result.dimension_scores}")
+
+    # Kapsamlı mod
+    print("\n=== KAPSAMLI MOD ===")
+    comp_result = full_evaluation(raw_values, 'comprehensive')
+    print(f"Base HIS: {comp_result.base_his}")
+    print(f"Cascade Multiplier: {comp_result.cascade_multiplier}")
+    print(f"Final HIS: {comp_result.his}")
+    print(f"Çarpanlar: {comp_result.multipliers}")
+    print(f"Cascade Seviyeleri: {comp_result.cascade_levels}")
+
+    if comp_result.warnings:
+        print(f"Uyarılar: {comp_result.warnings}")
+
+16.2 TypeScript Modülü
+/**
+ * HIS (Holistic Impact Score) TypeScript Modülü
+ * Versiyon: 3.0
+ */
+
+// ============================================================
+// TİP TANIMLARI
+// ============================================================
+
+type DataType = 
+  | 'quantitative_auto'
+  | 'quantitative_manual'
+  | 'qualitative_expert'
+  | 'qualitative_researcher'
+  | 'binary';
+
+type NormalizationType = 'logarithmic' | 'linear' | 'binary';
+
+interface Indicator {
+  code: string;
+  name: string;
+  dimension: string;
+  subdimension: string;
+  weight: number;
+  dataType: DataType;
+  normalization: NormalizationType;
+  maxValue?: number;
+  minValue: number;
+  evaluator: string;
+  cascadeLevel?: number;
+  multiplierType?: string;
+}
+
+interface DimensionScores {
+  [key: string]: number;
+}
+
+interface CascadeLevels {
+  [key: string]: {
+    decayFactor: number;
+    effect: number;
+    cumulative: number;
+  };
+}
+
+interface Multipliers {
+  total: number;
+  economic: number;
+  social: number;
+  scientific: number;
+  environmental: number;
+  networkEffect: number;
+}
+
+interface EvaluationResult {
+  his: number;
+  baseHis: number;
+  cascadeMultiplier: number;
+  dimensionScores: DimensionScores;
+  subdimensionScores: DimensionScores;
+  indicatorScores: DimensionScores;
+  cascadeLevels: CascadeLevels;
+  multipliers: Multipliers;
+  validationStatus: string;
+  warnings: string[];
+}
+
+// ============================================================
+// AĞIRLIK TANIMLARI
+// ============================================================
+
+const DIMENSION_WEIGHTS_QUICK: DimensionScores = {
+  D1: 0.35, D2: 0.35, D3: 0.15, D4: 0.15
+};
+
+const DIMENSION_WEIGHTS_COMPREHENSIVE: DimensionScores = {
+  D1: 0.20, D2: 0.20, D3: 0.10, D4: 0.10,
+  D5: 0.08, D6: 0.08, D7: 0.06, D8: 0.04,
+  D9: 0.04, D10: 0.03, D11: 0.03, D12: 0.02,
+  D13: 0.02, D14: 0.02, D15: 0.02, D16: 0.02
+};
+
+// ============================================================
+// NORMALİZASYON FONKSİYONLARI
+// ============================================================
+
+export function normalizeLogarithmic(
+  value: number,
+  maxValue: number,
+  minValue: number = 0
+): number {
+  if (value <= minValue) return 0;
+  if (maxValue <= minValue) return 0;
+
+  const shiftedValue = value - minValue;
+  const shiftedMax = maxValue - minValue;
+
+  const score = 100 * (Math.log(1 + shiftedValue) / Math.log(1 + shiftedMax));
+  return Math.min(100, Math.max(0, score));
+}
+
+export function normalizeLinear(
+  value: number,
+  maxValue: number = 5,
+  minValue: number = 1
+): number {
+  if (maxValue === minValue) return 0;
+
+  const score = 100 * (value - minValue) / (maxValue - minValue);
+  return Math.min(100, Math.max(0, score));
+}
+
+export function normalizeBinary(value: number): number {
+  return value === 1 ? 100 : 0;
+}
+
+// ============================================================
+// HIS HESAPLAMA
+// ============================================================
+
+export function calculateHISQuick(dimensionScores: DimensionScores): {
+  his: number;
+  ris: number;
+  mE: number;
+  mN: number;
+} {
+  const D1 = dimensionScores.D1 || 0;
+  const D2 = dimensionScores.D2 || 0;
+  const D3 = dimensionScores.D3 || 0;
+  const D4 = dimensionScores.D4 || 0;
+
+  const W_A = 0.35;
+  const W_S = 0.40;
+  const k_E = 2;
+  const k_N = 1.5;
+
+  const RIS = (W_A * D1) + (W_S * D2);
+  const M_E = Math.pow(D4 / 100, k_E);
+  const M_N = Math.pow(1 - D3 / 100, k_N);
+
+  let HIS = RIS * M_E * M_N;
+  HIS = Math.min(100, Math.max(0, HIS));
+
+  return {
+    his: Math.round(HIS * 100) / 100,
+    ris: Math.round(RIS * 100) / 100,
+    mE: Math.round(M_E * 10000) / 10000,
+    mN: Math.round(M_N * 10000) / 10000
+  };
+}
+
+export function calculateHISComprehensive(
+  dimensionScores: DimensionScores,
+  cascadeMultiplier: number = 1.0
+): {
+  his: number;
+  baseHis: number;
+  cascadeMultiplier: number;
+} {
+  const weights = DIMENSION_WEIGHTS_COMPREHENSIVE;
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const [code, weight] of Object.entries(weights)) {
+    const score = dimensionScores[code];
+    if (score !== undefined) {
+      const adjusted = code === 'D3' ? (100 - score) : score;
+      weightedSum += adjusted * weight;
+      totalWeight += weight;
+    }
+  }
+
+  const baseHis = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  const cascadeHis = baseHis * cascadeMultiplier;
+  const finalHis = Math.min(100, Math.max(0, cascadeHis));
+
+  return {
+    his: Math.round(finalHis * 100) / 100,
+    baseHis: Math.round(baseHis * 100) / 100,
+    cascadeMultiplier: Math.round(cascadeMultiplier * 10000) / 10000
+  };
+}
+
+// ============================================================
+// ÇARPAN HESAPLAMALARI
+// ============================================================
+
+export function calculateEconomicMultiplier(D5: number): number {
+  return 1.5 + (D5 / 100) * 3.5;
+}
+
+export function calculateSocialMultiplier(D2: number, D10: number): number {
+  const avg = (D2 + D10) / 2;
+  return 2.0 + (avg / 100) * 8.0;
+}
+
+export function calculateScientificMultiplier(D1: number, D9: number): number {
+  const avg = (D1 + D9) / 2;
+  return 10 * Math.pow(10, (avg / 100) * 2);
+}
+
+export function calculateEnvironmentalMultiplier(D7: number): number {
+  return 1.5 + (D7 / 100) * 2.5;
+}
+
+export function calculateNetworkEffect(D9: number, D12: number, D15: number): number {
+  const avg = (D9 + D12 + D15) / 3;
+  return Math.pow(avg / 100, 1.5) * 100;
+}
+
+export function calculateCascadeMultiplier(dimensionScores: DimensionScores): Multipliers {
+  const D1 = dimensionScores.D1 || 0;
+  const D2 = dimensionScores.D2 || 0;
+  const D5 = dimensionScores.D5 || 0;
+  const D7 = dimensionScores.D7 || 0;
+  const D9 = dimensionScores.D9 || 0;
+  const D10 = dimensionScores.D10 || 0;
+  const D12 = dimensionScores.D12 || 0;
+  const D15 = dimensionScores.D15 || 0;
+
+  const economic = calculateEconomicMultiplier(D5);
+  const social = calculateSocialMultiplier(D2, D10);
+  const scientific = calculateScientificMultiplier(D1, D9);
+  const environmental = calculateEnvironmentalMultiplier(D7);
+  const network = calculateNetworkEffect(D9, D12, D15);
+
+  const cascade = (
+    (economic * 0.25) +
+    (social * 0.25) +
+    (Math.min(scientific, 100) * 0.01) +
+    (environmental * 0.15) +
+    ((1 + network / 100) * 0.34)
+  );
+
+  return {
+    total: Math.min(cascade, 10.0),
+    economic: Math.round(economic * 100) / 100,
+    social: Math.round(social * 100) / 100,
+    scientific: Math.round(scientific * 100) / 100,
+    environmental: Math.round(environmental * 100) / 100,
+    networkEffect: Math.round(network * 100) / 100
+  };
+}
+
+export function calculate5LevelCascade(baseScore: number): CascadeLevels {
+  const decayRate = 0.85;
+  const levels: CascadeLevels = {};
+  let cumulative = 0;
+
+  for (let level = 1; level <= 5; level++) {
+    const decay = Math.pow(decayRate, level - 1);
+    const effect = baseScore * decay;
+    cumulative += effect;
+
+    levels[`level_${level}`] = {
+      decayFactor: Math.round(decay * 10000) / 10000,
+      effect: Math.round(effect * 100) / 100,
+      cumulative: Math.round(cumulative * 100) / 100
+    };
+  }
+
+  return levels;
+}
+
+// ============================================================
+// TAM DEĞERLENDİRME
+// ============================================================
+
+export function fullEvaluation(
+  dimensionScores: DimensionScores,
+  mode: 'quick' | 'comprehensive' = 'comprehensive'
+): EvaluationResult {
+  const warnings: string[] = [];
+
+  if (mode === 'quick') {
+    const result = calculateHISQuick(dimensionScores);
+
+    return {
+      his: result.his,
+      baseHis: result.his,
+      cascadeMultiplier: 1.0,
+      dimensionScores,
+      subdimensionScores: {},
+      indicatorScores: {},
+      cascadeLevels: {},
+      multipliers: {
+        total: 1.0,
+        economic: 1.0,
+        social: 1.0,
+        scientific: 1.0,
+        environmental: 1.0,
+        networkEffect: 0
+      },
+      validationStatus: 'valid',
+      warnings
+    };
+  }
+
+  // Kapsamlı mod
+  const multipliers = calculateCascadeMultiplier(dimensionScores);
+  const result = calculateHISComprehensive(dimensionScores, multipliers.total);
+
+  // Cascade seviyeleri
+  const allScores = Object.entries(DIMENSION_WEIGHTS_COMPREHENSIVE).map(([code]) => {
+    const score = dimensionScores[code] || 0;
+    return code === 'D3' ? (100 - score) : score;
+  });
+  const baseScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+  const cascadeLevels = calculate5LevelCascade(baseScore);
+
+  return {
+    his: result.his,
+    baseHis: result.baseHis,
+    cascadeMultiplier: multipliers.total,
+    dimensionScores,
+    subdimensionScores: {},
+    indicatorScores: {},
+    cascadeLevels,
+    multipliers,
+    validationStatus: 'valid',
+    warnings
+  };
+}
+
+
+
+Ekler
+Ek A: Gösterge Kodu Referansı
+Ek B: API Endpoint Özeti
+Ek C: Likert Ölçeği Referans Kartı
+Ek D: Hata Kodları
+
+
+Sözlük
+
+
+Referanslar
+Semantic Scholar API - https://api.semanticscholar.org
+Altmetric API - https://api.altmetric.com
+Lens.org API - https://docs.api.lens.org
+OpenAlex API - https://docs.openalex.org
+OpenCitations - https://opencitations.net
+Crossref API - https://api.crossref.org
+World Bank DataBank - https://data.worldbank.org
+WHO Global Health Observatory - https://www.who.int/data/gho
+USPTO API - https://developer.uspto.gov
+EPO Open Patent Services - https://www.epo.org/searching-for-patents/data/web-services/ops.html
+
+
+
+Doküman Sonu
+
+Versiyon: 3.0 Son Güncelleme: Ocak 2026 Yazar: Manus AI Lisans: CC BY-NC-SA 4.0
+
+
+
+Değişiklik Geçmişi

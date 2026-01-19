@@ -1,0 +1,155 @@
+HIS v3.0 Uctan Uca Calisan Urun Kapsami + Hesaplama Spesifikasyonu (Kapsam Ekleri)
+
+Surum: 1.0 Tarih: 07 January 2026 Durum: Taslak (Uretime Hazir)
+
+Revizyon Gecmisi
+Revizyon
+Tarih
+Aciklama
+1.0
+07 Ocak 2026
+Urunlesme eksikleri + etkileisim akislari + kabul parametreleri + hesaplama formulleri ozetleri.
+
+1. Amac ve Kapsam
+Bu dokuman; HIS Teknik Kilavuzu v3.0'da tanimlanan gosterge katalogu ve hesaplama mantigini, uretime alinabilecek bir urun tasarimina donusturmek icin gerekli eksik kapsami (rol/yetki, is akis durumu, API, veri modeli, UI, NFR, test/DoD) tamamlar. Teknik kilavuz metni degistirilmez; bu dosya onu urunlesme acisindan tamamlar.
+2. ISTER.PARAM - Kabul Kriteri Parametreleri
+Tum esikler tek yerden yonetilir; kabul kriterleri bu parametrelere referans verir.
+ISTER.PARAM.DOI_VALIDATE_REGEX: DOI format dogrulama ifadesi (pattern)
+ISTER.PARAM.FETCH_LATENCY_P95_MAX: Harici veri cekimi p95 (tek kaynak)
+ISTER.PARAM.FETCH_SUCCESS_RATE_MIN: Harici veri cekimi basari orani alt siniri
+ISTER.PARAM.SCORE_DETERMINISM_REQUIRED: Ayni input+surum icin deterministik cikti zorunlulugu (bool)
+ISTER.PARAM.REVIEWER_MIN: Kapsamli mod icin minimum reviewer sayisi
+ISTER.PARAM.CONSENSUS_TRIGGER_DELTA: Uzlasi tetigi: ayni gosterge icin puan farki (>=)
+ISTER.PARAM.ICC_MIN_GOOD: Uzmanlar arasi guvenilirlik icin overall ICC alt siniri
+ISTER.PARAM.AUDIT_LOG_COVERAGE_MIN: Denetim izi kapsama orani alt siniri
+ISTER.PARAM.REPORT_EXPORT_TIME_P95_MAX: PDF rapor uretimi p95
+3. Hesaplama Spesifikasyonu - Zorunlu Formuller (Ozet)
+Bu bolum; uygulama icinde dogrudan kodlanacak minimum formul setini ozetler. Detayli gosterge tanimlari ve alt boyut haritalari Teknik Kilavuz Ek-A'dadir.
+3.1 Ağırliklandirma Hiyerarsisi
+Gosterge -> Alt Boyut: SD_score = Σ(I_i * W_I_i) / Σ(W_I_i)
+Alt Boyut -> Boyut: D_score = Σ(SD_j * W_SD_j) / Σ(W_SD_j)
+Boyut -> HIS (kapsamli mod): HIS = Σ(D_k * W_D_k) / Σ(W_D_k)
+Not: D3 (Negatif Etki ve Risk) icin (100 - D3) kullanilir (kilavuz notu).
+3.2 HIS - Hizli Mod
+RIS = (W_A * D1) + (W_S * D2)
+M_E = (D4 / 100)^k_E
+M_N = (1 - D3 / 100)^k_N
+HIS = RIS * M_E * M_N
+HIS = min(100, max(0, HIS)) (0-100 clamp)
+Parametreler (kilavuz): W_A=0.35, W_S=0.40, k_E=2, k_N=1.5
+3.3 HIS - Kapsamli Mod
+Base_HIS = Σ(D_i * W_i) / Σ(W_i)
+Cascade_HIS = Base_HIS * Cascade_Multiplier
+Final_HIS = min(Cascade_HIS, 100)
+3.4 Uzmanlar Arasi Guvenilirlik (ICC - Basit Yaklasim)
+Kilavuzdaki basit ICC yaklasimi (her gosterge icin): values = [reviewer skorlar]; mean=ortalama; variance=var. variance>0 ise icc = 1 - (variance / (mean^2 + variance)) else icc=1. overall_icc = ortalama(indicator_icc).
+Kabul: overall_icc >= ISTER.PARAM.ICC_MIN_GOOD ise durum='good', degilse 'needs_review'.
+4. Uctan Uca Etkilesim Akislari (HIS Baglaminda)
+I-01 Giris ve Organizasyon Baglami
+Girdi: e-posta/parola (veya SSO opsiyonel), org secimi.
+Islem: JWT oturum; org_id scoping; role check.
+Cikti: access_token, kullanici profili.
+Kabul: Yetkisiz endpoint erisimi 401/403; org izolasyonu zorunlu (DB+API test).
+I-02 Makale Olusturma (DOI) ve Metaveri Dogrulama
+Girdi: DOI.
+Islem: DOI regex + harici metadata cekimi; cakisma kontrolu; paper kaydi.
+Cikti: paper_id + metadata.
+Kabul: Gecersiz DOI -> hata; gecerli DOI -> METADATA_VERIFIED durumu.
+I-03 Harici Veri Cekimi (Fetch Orkestrasyonu)
+Girdi: evaluation_id.
+Islem: kaynak bazli joblar (OpenAlex, Crossref, Altmetric vb.); retry/backoff; rate-limit yonetimi; ham yanit saklama.
+Cikti: auto-indicator taslaklari + raw response arsivi.
+Metrik: basari_orani >= ISTER.PARAM.FETCH_SUCCESS_RATE_MIN; p95 <= ISTER.PARAM.FETCH_LATENCY_P95_MAX.
+I-04 Gosterge Girisi + Kanit Baglama
+Girdi: I_xxx degeri (numeric/binary/likert/categorical) + 0..n kanit.
+Islem: tip dogrulama; aralik kontrolu; zorunlu justification/evidence kurallari.
+Cikti: indicator_entry + evidence kayitlari.
+Kabul: Kilavuz validasyon kurallari uygulanir; audit zorunlu.
+I-05 Reviewer Atama + Bagimsiz Degerlendirme
+Girdi: reviewer listesi.
+Islem: bagimsiz ekran (diger skorlar gizli); submit; ICC hesapla.
+Cikti: review paketleri + ICC raporu.
+Kabul: Reviewer digerlerinin skorunu goremez; overall_icc raporlanir.
+I-06 Uzlasi (Consensus) Sureci
+Girdi: ayni gosterge icin farkli reviewer skorlar.
+Islem: tetik: |max-min| >= ISTER.PARAM.CONSENSUS_TRIGGER_DELTA; karar kaydi; final_value kilitleme.
+Cikti: consensus_decision.
+Kabul: Karar gerekceli ve kanit referansli; FINALIZED sonrasi revizyondan baska degismez.
+I-07 ScoreRun - Deterministik Skor Hesaplama
+Girdi: evaluation (final indicator set) + catalog_version + weightset_version + algorithm_version.
+Islem: SD->D->HIS hesapla; clamp; cascade; output_hash.
+Cikti: score_runs.output_json (detay breakdown) + output_hash.
+Kabul: ISTER.PARAM.SCORE_DETERMINISM_REQUIRED=true ise ayni input_hash -> ayni output_hash.
+I-08 Rapor Uretimi ve Disari Aktarma
+Girdi: evaluation_id + rapor formati (PDF/JSON).
+Islem: template ile rapor; kanit listesi; eksik veri bayraklari; imza/versiyon bilgisi.
+Cikti: indirilebilir rapor.
+Kabul: p95 <= ISTER.PARAM.REPORT_EXPORT_TIME_P95_MAX; raporda catalog/weightset/algorithm surumu gorunur.
+I-09 Versiyonlama ve Revizyon
+Girdi: FINALIZED evaluation icin duzeltme ihtiyaci.
+Islem: yeni evaluation_revision olustur; eski output immutable kalir; fark raporu.
+Cikti: revizyon zinciri.
+Kabul: geriye donuk degisiklik yok; sadece yeni revizyonla ilerlenir.
+5. Roller ve Yetkilendirme (RBAC)
+SYS_ADMIN: Global ayarlar, katalog/agirlik seti, tum orglara yetki.
+ORG_ADMIN: Org ici kullanici/rol, kurul sablonlari.
+EVALUATION_OWNER: Degerlendirme olusturma, surec yonetimi.
+REVIEWER: Atandigi degerlendirmelerde puanlama ve kanit girisi.
+BOARD_CHAIR: Uzlasi sureci ve final kilitleme.
+AUDITOR/VIEWER: Salt okunur rapor + audit erisimi.
+6. Is Akisi (State Machine)
+DRAFT
+METADATA_VERIFIED
+FETCHING
+AUTO_DATA_READY
+MANUAL_INPUT_IN_PROGRESS
+REVIEW_ASSIGNED
+INDEPENDENT_REVIEW
+CONSENSUS_REQUIRED
+CONSENSUS_MEETING
+SCORING_READY
+SCORED
+FINALIZED
+ARCHIVED
+7. Veri Modeli (DB) - Minimum Sema
+organizations, users
+papers (doi, title, year, authors, source)
+evaluations (mode, status, catalog_version, weightset_version, algorithm_version)
+indicator_entries (value_raw, value_normalized, justification)
+evidences (type, url/file, reliability_level, note)
+reviews, review_scores
+consensus_items, consensus_decisions
+score_runs (inputs_hash, output_json, output_hash)
+api_response_raw (source_name, request_json, response_json, status)
+audit_events
+8. Ic API (OpenAPI ile Dokumante)
+POST /auth/login, GET /me
+POST /papers (doi), GET /papers/{id}
+POST /evaluations, GET /evaluations/{id}
+POST /evaluations/{id}/fetch, GET /evaluations/{id}/fetch/status
+GET /evaluations/{id}/indicators, PUT /evaluations/{id}/indicators/{code}
+POST /evaluations/{id}/indicators/{code}/evidences
+POST /evaluations/{id}/board, POST /evaluations/{id}/reviews/submit
+GET /evaluations/{id}/consensus, POST /evaluations/{id}/consensus/{code}/decide
+POST /evaluations/{id}/score-runs
+GET /evaluations/{id}/reports/pdf, GET /evaluations/{id}/reports/json
+POST /compare
+9. UI/Ekran Kapsami (V1)
+Login
+Dashboard (durumlar)
+Makale olustur (DOI) + metadata gorunumu
+Degerlendirme olustur (Hizli/Kapsamli)
+Fetch ilerleme + eksik veri listesi
+Gosterge formlari (D1-16 sekmeleri; arama; autosave; validasyon)
+Kanit yonetimi (URL/dosya + guvenilirlik)
+Kurul/uye atama
+Reviewer ekrani (bagimsiz)
+Uzlasi ekrani (farklar/karar/toplanti notu)
+Skor sonucu + breakdown + guvenilirlik
+Rapor indir (PDF/JSON)
+Karsilastirma
+Admin (kullanici/rol, katalog/weight set, audit)
+10. NFR / Test / DoD
+NFR: org izolasyonu, RBAC, audit, secrets; fetch degraded mode; gozlemlenebilirlik (request_id/job_id).
+E2E: DOI->fetch->manual->review->consensus->score->PDF; rate limit senaryosu; determinism testi; revizyon testi.
+DoD: P0 gereksinimler + testler + OpenAPI + tek komut calisma (Docker Compose) + rapor + audit dogrulama.
