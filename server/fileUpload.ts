@@ -46,7 +46,8 @@ export async function uploadPdfFromBase64(base64Data: string, filename: string):
     };
   } catch (error) {
     console.error("PDF upload error:", error);
-    throw new Error("PDF yükleme başarısız oldu");
+    // Propagate the actual error message for debugging
+    throw new Error(`PDF yükleme başarısız oldu: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
