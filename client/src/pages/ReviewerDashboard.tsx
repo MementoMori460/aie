@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
-import { FileText, UserCheck, Clock } from "lucide-react";
+import { FileText, UserCheck, Clock, CheckCircle2, Users } from "lucide-react";
 
 export default function ReviewerDashboard() {
     const { data: user } = trpc.auth.me.useQuery();
@@ -78,10 +78,28 @@ export default function ReviewerDashboard() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <Badge variant="secondary" className="flex items-center gap-1 justify-center">
-                                            <Clock className="w-3 h-3" />
-                                            Bekliyor
-                                        </Badge>
+                                        <div className="flex flex-col gap-2 items-center">
+                                            {/* My Status */}
+                                            {(ev as any).assignmentStatus === "completed" ? (
+                                                <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
+                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                    Siz Değerlendirdiniz
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                                                    <Clock className="w-3 h-3 mr-1" />
+                                                    Atama Bekliyor
+                                                </Badge>
+                                            )}
+
+                                            {/* Global Count */}
+                                            {(ev as any).completedReviewCount > 0 && (
+                                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                    <Users className="w-3 h-3 mr-1" />
+                                                    {(ev as any).completedReviewCount} Hakem Değerlendirdi
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Link href={`/review/${ev.id}`}>

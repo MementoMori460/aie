@@ -75,11 +75,6 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     console.log(`[Version Check] Build Timestamp: ${new Date().toISOString()}`);
-    console.log(`[Version Check] System Router loaded in appRouter`);
-
-    // Debug: List all TRPC procedures
-    const procedures = appRouter._def.procedures;
-    console.log(`[TRPC Debug] Available procedures:`, Object.keys(procedures).filter(key => key.startsWith('system.')));
   });
 }
 

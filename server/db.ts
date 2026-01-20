@@ -137,12 +137,35 @@ export async function getAllEvaluations() {
 }
 
 export async function getAssignedEvaluations(reviewerId: number) {
+  // 1. Get assignments for this reviewer
   const assignments = await db.select().from(reviewerAssignments).where(eq(reviewerAssignments.reviewerId, reviewerId));
-  const ids = assignments.map(a => a.evaluationId);
 
-  if (ids.length === 0) return [];
+  if (assignments.length === 0) return [];
 
-  return await db.select().from(evaluations).where(inArray(evaluations.id, ids)).orderBy(desc(evaluations.createdAt));
+  const evaluationIds = assignments.map(a => a.evaluationId);
+
+  // 2. Get the actual evaluations
+  const evals = await db.select().from(evaluations)
+    .where(inArray(evaluations.id, evaluationIds))
+    .orderBy(desc(evaluations.createdAt));
+
+  // 3. Get completed review counts for these evaluations
+  // We'll just fetch all completed reviews for these evaluations to count them
+  // A cleaner SQL way exists but this is easier with the current helper setup
+  const reviewsList = await db.select().from(reviews)
+    .where(inArray(reviews.evaluationId, evaluationIds));
+
+  // 4. Merge data
+  return evals.map(ev => {
+    const assignment = assignments.find(a => a.evaluationId === ev.id);
+    const completedCount = reviewsList.filter(r => r.evaluationId === ev.id && r.status === "submitted").length;
+
+    return {
+      ...ev,
+      assignmentStatus: assignment?.status || "assigned",
+      completedReviewCount: completedCount
+    };
+  });
 }
 
 export async function getEvaluationsByIds(ids: number[]) {
