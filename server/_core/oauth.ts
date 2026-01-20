@@ -113,7 +113,7 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       };
 
-      await db.createUser(newUser);
+      const insertedId = await db.createUser(newUser);
 
       const sessionToken = await sdk.createSessionToken(openId, {
         name: newUser.name,
@@ -123,7 +123,7 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.json({ success: true, user: newUser });
+      res.json({ success: true, user: { ...newUser, id: insertedId } });
     } catch (error) {
       console.error("[Auth] Registration failed:", error);
       res.status(500).json({ error: "Kayıt sırasında bir hata oluştu." });
