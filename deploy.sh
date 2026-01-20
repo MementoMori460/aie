@@ -20,7 +20,8 @@ npm install
 echo "🗄️  Updating database schema..."
 npm run db:push
 
-echo "🏗️  Building project..."
+echo "🏗️  Building project (Cleaning old artifacts first)..."
+rm -rf dist
 npm run build
 
 echo "🔄 Restarting server..."
