@@ -8,6 +8,34 @@
       "when": 1768851435928,
       "tag": "0000_purple_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1768862011721,
+      "tag": "0001_right_mister_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1768866217474,
+      "tag": "0002_careless_shinko_yamashiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1768869526542,
+      "tag": "0003_whole_lockjaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1768869911907,
+      "tag": "0004_rare_skin",
+      "breakpoints": true
     }
   ]
 }

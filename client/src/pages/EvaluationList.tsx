@@ -3,12 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Plus, FileText, Calendar, Trash2, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { parseDate } from "@shared/calculations";
+import { AssignChairDialog } from "@/components/AssignChairDialog";
 
 export default function EvaluationList() {
   const [, setLocation] = useLocation();
@@ -106,110 +109,97 @@ export default function EvaluationList() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {evaluations.map((evaluation) => (
-              <Card key={evaluation.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={selectedIds.includes(evaluation.id)}
-                      onCheckedChange={() => toggleSelection(evaluation.id)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CardTitle className="text-xl">
-                          <Link href={`/evaluations/${evaluation.id}`} className="hover:underline">
-                            {evaluation.paperTitle}
-                          </Link>
-                        </CardTitle>
-                        <Badge variant={evaluation.status === "completed" ? "default" : "secondary"}>
-                          {evaluation.status === "completed" ? "Tamamlandı" : "Taslak"}
-                        </Badge>
-                      </div>
-                      <CardDescription className="space-y-1">
-                        {evaluation.paperAuthors && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Yazarlar:</span>
-                            <span>{evaluation.paperAuthors}</span>
-                          </div>
-                        )}
-                        {evaluation.paperJournal && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Dergi:</span>
-                            <span>{evaluation.paperJournal}</span>
-                          </div>
-                        )}
-                        {evaluation.paperYear && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>{evaluation.paperYear}</span>
-                          </div>
-                        )}
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(evaluation.id, evaluation.paperTitle)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                {evaluation.scoreHIS && (
-                  <CardContent>
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-primary">
-                          {parseFloat(evaluation.scoreHIS).toFixed(0)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">HIS Skoru</div>
-                      </div>
-                      <div className="flex-1 grid grid-cols-4 gap-2 text-sm">
-                        {evaluation.scoreD1 && (
-                          <div>
-                            <div className="font-medium">D1: {parseFloat(evaluation.scoreD1).toFixed(0)}</div>
-                            <div className="text-muted-foreground text-xs">Akademik</div>
-                          </div>
-                        )}
-                        {evaluation.scoreD2 && (
-                          <div>
-                            <div className="font-medium">D2: {parseFloat(evaluation.scoreD2).toFixed(0)}</div>
-                            <div className="text-muted-foreground text-xs">Toplumsal</div>
-                          </div>
-                        )}
-                        {evaluation.scoreD3 && (
-                          <div>
-                            <div className="font-medium">D3: {parseFloat(evaluation.scoreD3).toFixed(0)}</div>
-                            <div className="text-muted-foreground text-xs">Negatif</div>
-                          </div>
-                        )}
-                        {evaluation.scoreD4 && (
-                          <div>
-                            <div className="font-medium">D4: {parseFloat(evaluation.scoreD4).toFixed(0)}</div>
-                            <div className="text-muted-foreground text-xs">Etik</div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div>
-                      Oluşturulma: {format(new Date(evaluation.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}
-                    </div>
-                    {evaluation.completedAt && (
+          <div className="bg-card border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>Makale Bilgileri</TableHead>
+                  <TableHead className="text-center">Durum</TableHead>
+                  <TableHead className="text-center font-bold">HIS</TableHead>
+                  <TableHead>Tarihler</TableHead>
+                  <TableHead className="text-right w-[100px]">İşlemler</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {evaluations.map((evaluation) => (
+                  <TableRow key={evaluation.id} className="group">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(evaluation.id)}
+                        onCheckedChange={() => toggleSelection(evaluation.id)}
+                      />
+                    </TableCell>
+                    {/* Row Content */}
+
+                    <TableCell>
                       <div>
-                        Tamamlanma: {format(new Date(evaluation.completedAt), "dd MMMM yyyy HH:mm", { locale: tr })}
+                        <Link href={`/evaluations/${evaluation.id}`} className="font-semibold text-primary hover:underline block">
+                          {evaluation.paperTitle}
+                        </Link>
+                        <div className="text-xs text-muted-foreground mt-1 space-x-2">
+                          {evaluation.paperAuthors && <span>{evaluation.paperAuthors}</span>}
+                        </div>
+                        {/* Display assigned chair if any */}
+                        {evaluation.boardChairId && (
+                          <div className="mt-1">
+                            <Badge variant="outline" className="text-[10px] h-4 py-0 px-1 border-purple-200 text-purple-700 bg-purple-50">
+                              Başhakem Atandı
+                            </Badge>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={evaluation.status === "completed" ? "default" : "secondary"}>
+                        {evaluation.status === "completed" ? "Tamamlandı" : "Taslak"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {evaluation.scoreHIS ? (
+                        <div className="font-bold text-lg text-primary">
+                          {Number(evaluation.scoreHIS).toFixed(0)}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <span className="w-12">Oluştur:</span>
+                          <span>{format(parseDate(evaluation.createdAt), "dd MMM yyyy HH:mm", { locale: tr })}</span>
+                        </div>
+                        {evaluation.completedAt && (
+                          <div className="flex items-center gap-1">
+                            <span className="w-12">Tamam:</span>
+                            <span>{format(parseDate(evaluation.completedAt), "dd MMM yyyy HH:mm", { locale: tr })}</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <div className="flex justify-end items-center gap-1">
+                        <AssignChairDialog
+                          evaluationId={evaluation.id}
+                          currentChairId={evaluation.boardChairId}
+                          onAssignSuccess={refetch}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleDelete(evaluation.id, evaluation.paperTitle)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

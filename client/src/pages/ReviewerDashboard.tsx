@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
 import { FileText, UserCheck, Clock } from "lucide-react";
 
@@ -23,8 +24,8 @@ export default function ReviewerDashboard() {
         );
     }
 
-    // Filter for evaluations assigned to the reviewer (Logic would be more complex in a real RBAC system)
-    const assignedEvaluations = evaluations?.filter(ev => ev.status === "draft") || [];
+    // Filter for evaluations assigned to the reviewer is handled by backend
+    const assignedEvaluations = evaluations || [];
 
     return (
         <div className="container py-8">
@@ -41,46 +42,56 @@ export default function ReviewerDashboard() {
             </div>
 
             {assignedEvaluations.length === 0 ? (
-                <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                        <UserCheck className="h-12 w-12 text-muted-foreground mb-4" />
-                        <CardTitle>Bekleyen Atama Yok</CardTitle>
-                        <CardDescription>
-                            Şu anda size atanmış yeni bir değerlendirme bulunmuyor.
-                        </CardDescription>
-                    </CardContent>
-                </Card>
+                <div className="text-center py-20 border-2 border-dashed rounded-lg bg-muted/20">
+                    <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold">Bekleyen Atama Yok</h3>
+                    <p className="text-muted-foreground">Şu anda size atanmış yeni bir değerlendirme bulunmuyor.</p>
+                </div>
             ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {assignedEvaluations.map((ev) => (
-                        <Card key={ev.id} className="hover:shadow-md transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-start justify-between mb-2">
-                                    <Badge variant="secondary" className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        Bekliyor
-                                    </Badge>
-                                </div>
-                                <CardTitle className="line-clamp-2 text-lg">
-                                    {ev.paperTitle}
-                                </CardTitle>
-                                <CardDescription className="line-clamp-1">
-                                    {ev.paperAuthors || "Yazar belirtilmemiş"}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                                    <div className="flex items-center gap-1">
-                                        <FileText className="w-4 h-4" />
-                                        {ev.evaluationMode === "quick" ? "Hızlı" : "Kapsamlı"}
-                                    </div>
-                                </div>
-                                <Link href={`/review/${ev.id}`}>
-                                    <Button className="w-full">Puanlamaya Başla</Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="border rounded-lg bg-card overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Makale Başlığı</TableHead>
+                                <TableHead>Yazarlar</TableHead>
+                                <TableHead className="text-center">Mod</TableHead>
+                                <TableHead className="text-center">Durum</TableHead>
+                                <TableHead className="text-right">İşlem</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {assignedEvaluations.map((ev) => (
+                                <TableRow key={ev.id}>
+                                    <TableCell className="font-medium max-w-[300px]">
+                                        <div className="truncate" title={ev.paperTitle}>
+                                            {ev.paperTitle}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="max-w-[200px]">
+                                        <div className="truncate text-muted-foreground" title={ev.paperAuthors || undefined}>
+                                            {ev.paperAuthors || "-"}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge variant="outline">
+                                            {ev.evaluationMode === "quick" ? "Hızlı" : "Kapsamlı"}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge variant="secondary" className="flex items-center gap-1 justify-center">
+                                            <Clock className="w-3 h-3" />
+                                            Bekliyor
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Link href={`/review/${ev.id}`}>
+                                            <Button size="sm">Puanlamaya Başla</Button>
+                                        </Link>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </div>
             )}
         </div>

@@ -19,6 +19,8 @@ import ConsensusDashboard from "./pages/ConsensusDashboard";
 import ComparisonDashboard from "./pages/ComparisonDashboard";
 
 import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
+import Register from "./pages/Register";
 
 function Router() {
   return (
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/review/:id" component={ReviewPage} />
       <Route path="/consensus" component={ConsensusDashboard} />
       <Route path="/compare" component={ComparisonDashboard} />
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/register" component={Register} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

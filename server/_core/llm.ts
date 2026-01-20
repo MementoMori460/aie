@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { getSystemSettings } from "../db";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -266,7 +267,15 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  // Fetch system settings to check for API overrides
+  const settings = await getSystemSettings();
+  const dbApiKey = settings.find(s => s.key === "BUILT_IN_FORGE_API_KEY" || s.key === "OPENAI_API_KEY")?.value;
+
+  const apiKey = dbApiKey || ENV.forgeApiKey;
+
+  if (!apiKey) {
+    throw new Error("API Key configuration missing. Please set BUILT_IN_FORGE_API_KEY in Admin Panel or .env file.");
+  }
 
   const {
     messages,
@@ -316,7 +325,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(payload),
   });

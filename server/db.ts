@@ -1,7 +1,7 @@
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { User, InsertUser, users, evaluations, evaluationIndicators, InsertEvaluation, InsertEvaluationIndicator, reviews, reviewerAssignments, InsertReview, InsertReviewerAssignment, auditLogs, InsertAuditLog } from "../drizzle/schema";
+import { User, InsertUser, users, evaluations, evaluationIndicators, InsertEvaluation, InsertEvaluationIndicator, reviews, reviewerAssignments, InsertReview, InsertReviewerAssignment, auditLogs, InsertAuditLog, systemSettings, InsertSystemSetting, aiPrompts, InsertAiPrompt } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 // Initialize SQLite database
@@ -70,6 +70,50 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAllUsers() {
+  return await db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+export async function getUserById(id: number) {
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUserRole(userId: number, role: "user" | "admin" | "reviewer" | "board_chair") {
+  await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+export async function createUser(user: InsertUser) {
+  const result = await db.insert(users).values(user).returning({ insertedId: users.id });
+  return result[0].insertedId;
+}
+
+// System Settings queries
+
+export async function getSystemSettings() {
+  return await db.select().from(systemSettings);
+}
+
+export async function getSystemSetting(key: string) {
+  const result = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
+  return result.length > 0 ? result[0].value : undefined;
+}
+
+export async function updateSystemSetting(key: string, value: string, description?: string) {
+  await db
+    .insert(systemSettings)
+    .values({ key, value, description })
+    .onConflictDoUpdate({
+      target: systemSettings.key,
+      set: { value, description, updatedAt: new Date() },
+    });
 }
 
 // Evaluation queries
@@ -250,4 +294,44 @@ export async function getAuditLogs(evaluationId?: number) {
     return await query.where(eq(auditLogs.evaluationId, evaluationId)).orderBy(desc(auditLogs.createdAt));
   }
   return await query.orderBy(desc(auditLogs.createdAt)).limit(100);
+}
+
+// User Management extensions
+
+export async function updateUser(id: number, data: Partial<InsertUser>) {
+  await db.update(users).set(data).where(eq(users.id, id));
+}
+
+export async function updateUserBlockStatus(id: number, isBlocked: boolean) {
+  // Map boolean to integer (0 or 1) for SQLite if needed, but Drizzle handles 'mode: boolean' usually.
+  // However, I used 'mode: boolean' in schema, so true/false should work directly.
+  await db.update(users).set({ isBlocked }).where(eq(users.id, id));
+}
+
+
+// AI Prompt Management
+
+export async function createAiPrompt(data: InsertAiPrompt) {
+  const result = await db.insert(aiPrompts).values(data).returning({ insertedId: aiPrompts.id });
+  return result[0].insertedId;
+}
+
+export async function getAiPromptHistory() {
+  return await db.select().from(aiPrompts).orderBy(desc(aiPrompts.createdAt));
+}
+
+export async function getActiveAiPrompt() {
+  const result = await db.select().from(aiPrompts).where(eq(aiPrompts.isActive, true)).orderBy(desc(aiPrompts.createdAt)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function setActiveAiPrompt(id: number) {
+  // First set all to inactive
+  await db.update(aiPrompts).set({ isActive: false });
+  // Then set specific one to active
+  await db.update(aiPrompts).set({ isActive: true }).where(eq(aiPrompts.id, id));
+}
+
+export async function deleteAiPrompt(id: number) {
+  await db.delete(aiPrompts).where(eq(aiPrompts.id, id));
 }

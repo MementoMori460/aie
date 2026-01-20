@@ -16,7 +16,7 @@ import { WEIGHTS } from "./indicators";
 export function logarithmicNormalization(value: number, maxValue: number): number {
   if (value <= 0) return 0;
   if (maxValue <= 0) return 0;
-  
+
   const score = 100 * (Math.log(1 + value) / Math.log(1 + maxValue));
   return Math.min(100, Math.max(0, score));
 }
@@ -31,7 +31,7 @@ export function logarithmicNormalization(value: number, maxValue: number): numbe
  */
 export function linearNormalization(value: number, minValue: number = 1, maxValue: number = 5): number {
   if (maxValue === minValue) return 0;
-  
+
   const score = ((value - minValue) / (maxValue - minValue)) * 100;
   return Math.min(100, Math.max(0, score));
 }
@@ -58,10 +58,10 @@ export function calculateSubDimensionScore(
   weights?: number[]
 ): number {
   if (indicatorScores.length === 0) return 0;
-  
+
   // If no weights provided, use equal weights
   const w = weights || indicatorScores.map(() => 1 / indicatorScores.length);
-  
+
   // Weighted average
   const score = indicatorScores.reduce((sum, score, i) => sum + score * w[i], 0);
   return Math.min(100, Math.max(0, score));
@@ -79,7 +79,7 @@ export function calculateDimensionScore(
   weights: number[]
 ): number {
   if (subDimensionScores.length === 0) return 0;
-  
+
   // Weighted average
   const score = subDimensionScores.reduce((sum, score, i) => sum + score * weights[i], 0);
   return Math.min(100, Math.max(0, score));
@@ -87,16 +87,11 @@ export function calculateDimensionScore(
 
 /**
  * Calculate Holistic Impact Score (HIS) from dimension scores
- * 
- * Formula:
- * RIS = (W_A * D1) + (W_S * D2)
- * M_E = (D4 / 100) ^ k_E
- * M_N = (1 - (D3 / 100)) ^ k_N
- * HIS = RIS * M_E * M_N
+ * Uses the exponential penalty model for robustness
  * 
  * @param scoreD1 - Academic Impact score (0-100)
  * @param scoreD2 - Social & Practical Impact score (0-100)
- * @param scoreD3 - Negative Impact & Risk score (0-100, higher is worse)
+ * @param scoreD3 - Negative Impact & Risk score (0-100)
  * @param scoreD4 - Ethics & Responsibility score (0-100)
  * @returns Holistic Impact Score (0-100)
  */
@@ -106,22 +101,46 @@ export function calculateHIS(
   scoreD3: number,
   scoreD4: number
 ): number {
-  const { W_A, W_S } = WEIGHTS.dimensions;
-  const { k_E, k_N } = WEIGHTS.sensitivityCoefficients;
-  
-  // Raw Impact Score (positive impacts only)
-  const RIS = (W_A * scoreD1) + (W_S * scoreD2);
-  
-  // Ethics Penalty Multiplier (low ethics = low multiplier)
-  const M_E = Math.pow(scoreD4 / 100, k_E);
-  
-  // Negative Impact Penalty Multiplier (high negative impact = low multiplier)
-  const M_N = Math.pow(1 - (scoreD3 / 100), k_N);
-  
-  // Final HIS
-  const HIS = RIS * M_E * M_N;
-  
+  // Weights (Keep in sync with server/hisCalculator.ts)
+  const W_A = 0.35; // Academic
+  const W_S = 0.40; // Social
+  const W_N = 0.15; // Negative (penalty weight)
+  const W_E = 0.10; // Ethics (penalty weight)
+
+  // Sensitivity coefficients
+  const k_E = 2.0;   // Ethics sensitivity
+  const k_N = 1.5;   // Negative impact sensitivity
+
+  // Base score (positive dimensions)
+  const baseScore = (scoreD1 * W_A) + (scoreD2 * W_S);
+
+  // Penalties (exponential)
+  const ethicsPenalty = W_E * (1 - Math.exp(-k_E * (100 - scoreD4) / 100));
+  const negativePenalty = W_N * (1 - Math.exp(-k_N * scoreD3 / 100));
+
+  // Final HIS (Penalty acts as a reduction factor on 1.0)
+  const HIS = baseScore * (1 - ethicsPenalty - negativePenalty);
+
   return Math.min(100, Math.max(0, HIS));
+}
+
+/**
+ * Robust date parser for SQLite/tRPC timestamps
+ */
+export function parseDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return val;
+  if (typeof val === "number") {
+    // If it looks like seconds (10 digits), convert to ms
+    if (val < 10000000000) return new Date(val * 1000);
+    return new Date(val);
+  }
+  if (typeof val === "string") {
+    // If it's a numeric string
+    if (!isNaN(Number(val))) return parseDate(Number(val));
+    return new Date(val);
+  }
+  return new Date(val);
 }
 
 /**
@@ -133,7 +152,7 @@ export function calculateHIS(
  */
 export function parseRawValue(rawValue: string | undefined, type: string): number {
   if (!rawValue) return 0;
-  
+
   const parsed = parseFloat(rawValue);
   return isNaN(parsed) ? 0 : parsed;
 }

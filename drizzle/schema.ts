@@ -8,15 +8,46 @@ export const users = sqliteTable("users", {
   openId: text("openId").notNull().unique(),
   name: text("name"),
   email: text("email"),
+  password: text("password"),
   loginMethod: text("loginMethod"),
   role: text("role", { enum: ["user", "admin", "reviewer", "board_chair"] }).default("user").notNull(),
-  createdAt: integer("createdAt", { mode: "timestamp" }).defaultNow().notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).defaultNow().notNull(), // SQLite doesn't have onUpdateNow natively, handled in app logic usually or just kept simple
-  lastSignedIn: integer("lastSignedIn", { mode: "timestamp" }).defaultNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  lastSignedIn: integer("lastSignedIn", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  isBlocked: integer("isBlocked", { mode: "boolean" }).default(false).notNull(),
+  expertise: text("expertise"), // Comma separated list of expertise areas
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * AI Prompts table - stores version history of system prompts
+ */
+export const aiPrompts = sqliteTable("aiPrompts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  promptText: text("promptText").notNull(),
+  isActive: integer("isActive", { mode: "boolean" }).default(false).notNull(),
+  createdBy: integer("createdBy").notNull(), // User ID of admin who created this version
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+});
+
+export type AiPrompt = typeof aiPrompts.$inferSelect;
+export type InsertAiPrompt = typeof aiPrompts.$inferInsert;
+
+/**
+ * System Settings table - stores global configuration like API keys
+ */
+export const systemSettings = sqliteTable("systemSettings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = typeof systemSettings.$inferInsert;
 
 /**
  * Evaluations table - stores each paper evaluation session
@@ -32,6 +63,8 @@ export const evaluations = sqliteTable("evaluations", {
   paperYear: integer("paperYear"),
   paperJournal: text("paperJournal"),
   paperAbstract: text("paperAbstract"),
+  pdfPath: text("pdfPath"), // Path to the uploaded PDF file
+  boardChairId: integer("boardChairId"), // Assigned Board Chair ID
 
   // Evaluation mode
   evaluationMode: text("evaluationMode", { enum: ["quick", "comprehensive"] }).default("quick").notNull(),
@@ -65,9 +98,9 @@ export const evaluations = sqliteTable("evaluations", {
 
   // Metadata
   status: text("status", { enum: ["draft", "completed"] }).default("draft").notNull(),
-  completedAt: integer("completedAt", { mode: "timestamp" }),
-  createdAt: integer("createdAt", { mode: "timestamp" }).defaultNow().notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).defaultNow().notNull(),
+  completedAt: integer("completedAt", { mode: "timestamp_ms" }),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
 });
 
 export type Evaluation = typeof evaluations.$inferSelect;
@@ -86,8 +119,8 @@ export const evaluationIndicators = sqliteTable("evaluationIndicators", {
 
   metadata: text("metadata", { mode: "json" }),
 
-  createdAt: integer("createdAt", { mode: "timestamp" }).defaultNow().notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).defaultNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
 });
 
 export type EvaluationIndicator = typeof evaluationIndicators.$inferSelect;
@@ -101,8 +134,8 @@ export const reviewerAssignments = sqliteTable("reviewerAssignments", {
   evaluationId: integer("evaluationId").notNull(),
   reviewerId: integer("userId").notNull(),
   status: text("status", { enum: ["assigned", "in_progress", "completed"] }).default("assigned").notNull(),
-  assignedAt: integer("assignedAt", { mode: "timestamp" }).defaultNow().notNull(),
-  completedAt: integer("completedAt", { mode: "timestamp" }),
+  assignedAt: integer("assignedAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  completedAt: integer("completedAt", { mode: "timestamp_ms" }),
 });
 
 export type ReviewerAssignment = typeof reviewerAssignments.$inferSelect;
@@ -125,8 +158,8 @@ export const reviews = sqliteTable("reviews", {
 
   comment: text("comment"),
   status: text("status", { enum: ["draft", "submitted"] }).default("draft").notNull(),
-  createdAt: integer("createdAt", { mode: "timestamp" }).defaultNow().notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).defaultNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
 });
 
 export type Review = typeof reviews.$inferSelect;
@@ -141,7 +174,7 @@ export const auditLogs = sqliteTable("auditLogs", {
   evaluationId: integer("evaluationId"),
   action: text("action").notNull(),
   details: text("details", { mode: "json" }),
-  createdAt: integer("createdAt", { mode: "timestamp" }).defaultNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).$defaultFn(() => new Date()).notNull(),
 });
 
 export type AuditLog = typeof auditLogs.$inferSelect;

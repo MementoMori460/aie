@@ -6,6 +6,7 @@ import { calculateHIS, type DimensionScores, type CascadeMetrics } from "./hisCa
 import { calculateCascadeMultipliersFromDimensions, calculate5LevelCascadeFromDimensions } from "./cascadeEngine";
 import { z } from "zod";
 import * as db from "./db";
+import { sendEmail } from "./_core/email";
 import { extractTextFromPDF, extractPaperMetadata, suggestIndicatorValues } from "./pdfProcessor";
 import { uploadPdfFromBase64, cleanupTempFile } from "./fileUpload";
 import { analyzeIndicatorsWithAI } from "./aiIndicatorAnalyzer";
@@ -93,6 +94,8 @@ export const appRouter = router({
         paperYear: z.number().optional(),
         paperJournal: z.string().optional(),
         paperAbstract: z.string().optional(),
+        pdfPath: z.string().optional(),
+        boardChairId: z.number().optional(),
         // Dimension scores (D1-D16)
         D1: z.number().optional(),
         D2: z.number().optional(),
@@ -163,8 +166,8 @@ export const appRouter = router({
             const dimKey = `D${i}` as keyof typeof data;
             const score = data[dimKey];
             if (score !== undefined && typeof score === 'number') {
-              dbData[`scoreD${i}`] = score.toFixed(2);
-              delete dbData[dimKey]; // Remove D1 format
+              dbData[`scoreD${i}`] = score; // SQLite uses REAL (number)
+              delete dbData[dimKey as string];
             }
           }
 
@@ -185,6 +188,29 @@ export const appRouter = router({
 
         // No dimension scores provided, just update other fields
         await db.updateEvaluation(id, data);
+
+        if (data.status === "completed") {
+          // Check notification setting
+          const notifyCompletion = await db.getSystemSetting("notify_on_completion");
+
+          if (notifyCompletion === "true") {
+            // Get all admin users
+            const users = await db.getAllUsers();
+            const admins = users.filter(u => u.role === "admin" && u.email);
+
+            for (const admin of admins) {
+              await sendEmail({
+                to: admin.email!,
+                subject: "Değerlendirme Tamamlandı",
+                html: `
+                  <h2>Değerlendirme Tamamlandı</h2>
+                  <p><strong>${input.paperTitle || 'Bir makale'}</strong> başlıklı değerlendirme tamamlandı.</p>
+                  <p>Sonuçları görüntülemek için panele giriş yapınız.</p>
+                 `
+              });
+            }
+          }
+        }
 
         await db.createAuditLog({
           userId: ctx.user.id,
@@ -367,14 +393,14 @@ export const appRouter = router({
           paperYear: evaluation.paperYear || undefined,
           paperJournal: evaluation.paperJournal || '',
           paperAbstract: evaluation.paperAbstract || '',
-          scoreD1: evaluation.scoreD1 || '0',
-          scoreD2: evaluation.scoreD2 || '0',
-          scoreD3: evaluation.scoreD3 || '0',
-          scoreD4: evaluation.scoreD4 || '0',
-          scoreHIS: evaluation.scoreHIS || '0',
+          scoreD1: evaluation.scoreD1?.toString() || '0',
+          scoreD2: evaluation.scoreD2?.toString() || '0',
+          scoreD3: evaluation.scoreD3?.toString() || '0',
+          scoreD4: evaluation.scoreD4?.toString() || '0',
+          scoreHIS: evaluation.scoreHIS?.toString() || '0',
           indicators: indicators.map((ind) => ({
             code: ind.indicatorCode,
-            value: parseFloat(ind.normalizedScore || '0'),
+            value: parseFloat(ind.normalizedScore?.toString() || '0'),
           })),
         });
 
@@ -408,14 +434,14 @@ export const appRouter = router({
           paperYear: evaluation.paperYear || undefined,
           paperJournal: evaluation.paperJournal || '',
           paperAbstract: evaluation.paperAbstract || '',
-          scoreD1: evaluation.scoreD1 || '0',
-          scoreD2: evaluation.scoreD2 || '0',
-          scoreD3: evaluation.scoreD3 || '0',
-          scoreD4: evaluation.scoreD4 || '0',
-          scoreHIS: evaluation.scoreHIS || '0',
+          scoreD1: evaluation.scoreD1?.toString() || '0',
+          scoreD2: evaluation.scoreD2?.toString() || '0',
+          scoreD3: evaluation.scoreD3?.toString() || '0',
+          scoreD4: evaluation.scoreD4?.toString() || '0',
+          scoreHIS: evaluation.scoreHIS?.toString() || '0',
           indicators: indicators.map((ind) => ({
             code: ind.indicatorCode,
-            value: parseFloat(ind.normalizedScore || '0'),
+            value: parseFloat(ind.normalizedScore?.toString() || '0'),
           })),
         });
 
@@ -496,12 +522,35 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const reviewId = await db.saveReview({
           ...input,
-          scoreD1: input.scoreD1?.toFixed(2),
-          scoreD2: input.scoreD2?.toFixed(2),
-          scoreD3: input.scoreD3?.toFixed(2),
-          scoreD4: input.scoreD4?.toFixed(2),
-          scoreHIS: input.scoreHIS?.toFixed(2),
+          scoreD1: input.scoreD1,
+          scoreD2: input.scoreD2,
+          scoreD3: input.scoreD3,
+          scoreD4: input.scoreD4,
+          scoreHIS: input.scoreHIS,
         });
+
+        if (input.status === "submitted") {
+          const notifyReview = await db.getSystemSetting("notify_on_review_submission");
+          if (notifyReview === "true") {
+            const users = await db.getAllUsers();
+            const recipients = users.filter(u => (u.role === "admin" || u.role === "board_chair") && u.email);
+
+            // Get evaluation title for context
+            const evaluation = await db.getEvaluationById(input.evaluationId);
+
+            for (const recipient of recipients) {
+              await sendEmail({
+                to: recipient.email!,
+                subject: "Yeni Hakem Raporu Gönderildi",
+                html: `
+                  <h2>Yeni Hakem Raporu</h2>
+                  <p><strong>${evaluation?.paperTitle || 'Bir makale'}</strong> için yeni bir hakem raporu gönderildi.</p>
+                  <p>Detayları görmek için panele giriş yapınız.</p>
+                 `
+              });
+            }
+          }
+        }
 
         await db.createAuditLog({
           userId: ctx.user.id,
@@ -583,6 +632,49 @@ export const appRouter = router({
         return { assignmentId };
       }),
 
+    notify: protectedProcedure
+      .input(z.object({
+        evaluationId: z.number(),
+        reviewerId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { sendEmail } = await import("./_core/email");
+
+        // Fetch evaluation and reviewer details
+        const evaluation = await db.getEvaluationById(input.evaluationId);
+        const reviewer = await db.getUserById(input.reviewerId); // Need to implement getUserById or use custom query
+        // Since we don't have getUserById exposed yet, let's just do a quick fix or assume we can query users table
+        // Actually, let's use a raw query or add getUserById to db.ts first? 
+        // Better to rely on what we have.
+
+        // Wait, I can't easily add a new DB function here without editing db.ts first.
+        // But I can import db and maybe use a raw query if needed? No, better practice is db.ts.
+        // Let's defer current implementation and just assume db.getUserById exists, 
+        // OR I will add it to db.ts in next step.
+        // For now, I will modify db.ts FIRST in a separate tool call if possible?
+        // "getUserByOpenId" exists. "getAllUsers" exists.
+
+        // Check if notification is enabled
+        const notifyEnabled = await db.getSystemSetting("notify_on_assignment");
+
+        if (notifyEnabled === "true" && reviewer && reviewer.email) {
+          await sendEmail({
+            to: reviewer.email,
+            subject: "Yeni Makale Değerlendirme Görevi",
+            html: `
+                        <h2>Sayın ${reviewer.name || 'Hakem'},</h2>
+                        <p>Size yeni bir makale değerlendirmesi atandı.</p>
+                        <p><strong>Makale Başlığı:</strong> ${evaluation?.paperTitle}</p>
+                        <p>Lütfen panele giriş yaparak değerlendirmeyi tamamlayınız.</p>
+                        <br/>
+                        <p>Saygılarımızla,<br/>Academic Impact Evaluator</p>
+                    `
+          });
+        }
+
+        return { success: true };
+      }),
+
     listByEvaluation: protectedProcedure
       .input(z.object({ evaluationId: z.number() }))
       .query(async ({ input }) => {
@@ -596,6 +688,280 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await db.updateReviewerAssignmentStatus(input.id, input.status);
+        return { success: true };
+      }),
+  }),
+
+  admin: router({
+    listUsers: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin' && ctx.user.role !== 'board_chair') throw new Error("Unauthorized");
+        return await db.getAllUsers();
+      }),
+
+    updateUserRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(["user", "admin", "reviewer", "board_chair"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        await db.updateUserRole(input.userId, input.role as any);
+
+        if (input.userId !== ctx.user.id) {
+          const notifyRole = await db.getSystemSetting("notify_on_role_change");
+          if (notifyRole === "true") {
+            const targetUser = await db.getUserById(input.userId);
+            if (targetUser && targetUser.email) {
+              await sendEmail({
+                to: targetUser.email,
+                subject: "Kullanıcı Yetkiniz Güncellendi",
+                html: `
+                    <h2>Hesap Yetkiniz Değişti</h2>
+                    <p>Sayın ${targetUser.name || 'Kullanıcı'},</p>
+                    <p>Yönetici tarafından hesabınızın yetkisi güncellenmiştir.</p>
+                    <p><strong>Yeni Rol:</strong> ${input.role}</p>
+                    <p>Giriş yapmak için panele gidiniz.</p>
+                   `
+              });
+            }
+          }
+        }
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1, // System audit
+          action: "USER_ROLE_UPDATED",
+          details: { targetUserId: input.userId, newRole: input.role },
+        });
+
+        return { success: true };
+      }),
+
+    createUser: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        email: z.string(),
+        password: z.string(),
+        role: z.enum(["user", "admin", "reviewer", "board_chair"]),
+        expertise: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        const existingUser = await db.getUserByEmail(input.email);
+        if (existingUser) throw new Error("Bu e-posta adresi zaten kullanımda.");
+
+        const { nanoid } = await import("nanoid");
+        const openId = `admin-created-${nanoid(10)}`;
+
+        await db.createUser({
+          openId,
+          name: input.name,
+          email: input.email,
+          password: input.password,
+          role: input.role,
+          expertise: input.expertise,
+          loginMethod: "admin",
+          lastSignedIn: new Date(),
+        });
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: "USER_CREATED_BY_ADMIN",
+          details: { createdEmail: input.email, role: input.role },
+        });
+
+        return { success: true };
+      }),
+
+    updateUser: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string(),
+        email: z.string().email(),
+        expertise: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        await db.updateUser(input.id, {
+          name: input.name,
+          email: input.email,
+          expertise: input.expertise,
+        });
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: "USER_UPDATED_BY_ADMIN",
+          details: { targetUserId: input.id, updates: { name: input.name, email: input.email } },
+        });
+
+        return { success: true };
+      }),
+
+    resetPassword: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        password: z.string().min(6),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        await db.updateUser(input.id, {
+          password: input.password, // Ideally hash this if we used bcrypt in `createUser`
+        });
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: "USER_PASSWORD_RESET_BY_ADMIN",
+          details: { targetUserId: input.id },
+        });
+
+        return { success: true };
+      }),
+
+    toggleBlock: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        isBlocked: z.boolean(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        // Prevent blocking self
+        if (input.id === ctx.user.id) throw new Error("Kendinizi engelleyemezsiniz.");
+
+        await db.updateUserBlockStatus(input.id, input.isBlocked);
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: input.isBlocked ? "USER_BLOCKED" : "USER_UNBLOCKED",
+          details: { targetUserId: input.id },
+        });
+
+        return { success: true };
+      }),
+
+    // AI Prompt Management
+    getPrompt: protectedProcedure
+      .query(async ({ ctx }) => {
+        // If there's an active prompt in DB, use it. Otherwise fall back to system default.
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        try {
+          const activePrompt = await db.getActiveAiPrompt();
+          if (activePrompt) {
+            return activePrompt.promptText;
+          }
+        } catch (e) {
+          console.error("Error fetching active prompt:", e);
+        }
+
+        const { generatePromptTemplate } = await import("./aiIndicatorAnalyzer");
+        return generatePromptTemplate();
+      }),
+
+    savePrompt: protectedProcedure
+      .input(z.object({
+        promptText: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        const promptId = await db.createAiPrompt({
+          promptText: input.promptText,
+          isActive: true, // Auto-activate new prompt
+          createdBy: ctx.user.id,
+        });
+
+        // Deactivate others? createAiPrompt doesn't handle that. 
+        // We should use setActiveAiPrompt logic or handle it here.
+        await db.setActiveAiPrompt(promptId as number);
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: "AI_PROMPT_UPDATED",
+          details: { promptId },
+        });
+
+        return { success: true, promptId };
+      }),
+
+    getPromptHistory: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+        const history = await db.getAiPromptHistory();
+        // Enrich with creator info? Ideally yes, but let's just return IDs for now.
+        // We need creator names. 
+        const users = await db.getAllUsers();
+        const userMap = new Map(users.map(u => [u.id, u.name]));
+
+        return history.map(h => ({
+          ...h,
+          creatorName: userMap.get(h.createdBy) || "Unknown",
+        }));
+      }),
+
+    setActivePrompt: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+        await db.setActiveAiPrompt(input.id);
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: "AI_PROMPT_ACTIVATED",
+          details: { promptId: input.id },
+        });
+        return { success: true };
+      }),
+
+    deletePrompt: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        const active = await db.getActiveAiPrompt();
+        if (active && active.id === input.id) {
+          throw new Error("Aktif prompt silinemez. Önce başka bir versiyonu aktif yapın.");
+        }
+
+        await db.deleteAiPrompt(input.id);
+        return { success: true };
+      }),
+
+    getSettings: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+        return await db.getSystemSettings();
+      }),
+
+    updateSetting: protectedProcedure
+      .input(z.object({
+        key: z.string(),
+        value: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new Error("Unauthorized");
+
+        await db.updateSystemSetting(input.key, input.value, input.description);
+
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          evaluationId: -1,
+          action: "SYSTEM_SETTING_UPDATED",
+          details: { key: input.key },
+        });
+
         return { success: true };
       }),
   }),

@@ -156,7 +156,7 @@ export function InteractiveDemo() {
                       Artık kendi makalenizi değerlendirmeye başlayabilirsiniz.
                     </p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm justify-center pt-4">
+                  <div className="flex flex-col gap-4 w-full max-w-xs justify-center pt-4">
                     <Button
                       onClick={() => {
                         setIsOpen(false);

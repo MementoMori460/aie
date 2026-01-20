@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { nanoid } from "nanoid";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -87,77 +88,107 @@ export function registerOAuthRoutes(app: Express) {
     }
   });
 
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      const { name, email, password } = req.body;
 
-      // Simple password check for demo
-      if (!email || !password) {
-        res.status(400).json({ error: "E-posta ve şifre gereklidir." });
-        return;
+      if (!email || !password || !name) {
+        return res.status(400).json({ error: "Tüm alanlar gereklidir." });
       }
 
-      if (password !== "1234") {
-        res.status(401).json({ error: "Hatalı şifre." });
-        return;
+      // Check if user already exists
+      const existingUser = await db.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Bu e-posta adresi zaten kullanımda." });
       }
 
-      // Map specific emails to roles
-      let role: "user" | "admin" | "reviewer" | "board_chair" = "user";
-      let name = "Kullanıcı";
-      let openId = "mock-user-id";
-
-      switch (email) {
-        case "yazar@aie.com":
-          role = "user";
-          name = "Ahmet Yazar";
-          openId = "mock-author-id";
-          break;
-        case "hakem@aie.com":
-          role = "reviewer";
-          name = "Mehmet Hakem";
-          openId = "mock-reviewer-id";
-          break;
-        case "baskan@aie.com":
-          role = "board_chair";
-          name = "Ayşe Başkan";
-          openId = "mock-chair-id";
-          break;
-        case "admin@aie.com":
-          role = "admin";
-          name = "Sistem Yöneticisi";
-          openId = "mock-admin-id";
-          break;
-        default:
-          res.status(401).json({ error: "Tanımsız kullanıcı." });
-          return;
-      }
-
-      const mockUser = {
+      const openId = `local-${nanoid(10)}`;
+      const newUser = {
         openId,
         name,
         email,
-        loginMethod: "email_password",
-        role,
+        password, // Storing as plaintext for now as per plan
+        loginMethod: "local",
+        role: "user" as const,
         lastSignedIn: new Date(),
       };
 
-      console.log(`[Auth] Login attempt for: ${email} as ${role}`);
-      await db.upsertUser(mockUser);
+      await db.createUser(newUser);
 
       const sessionToken = await sdk.createSessionToken(openId, {
-        name: mockUser.name,
+        name: newUser.name,
         expiresInMs: ONE_YEAR_MS,
       });
 
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.json({ success: true, user: mockUser });
+      res.json({ success: true, user: newUser });
+    } catch (error) {
+      console.error("[Auth] Registration failed:", error);
+      res.status(500).json({ error: "Kayıt sırasında bir hata oluştu." });
+    }
+  });
+
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "E-posta ve şifre gereklidir." });
+      }
+
+      // 1. Check for Demo Accounts (Backward compatibility/Convenience)
+      const demoAccounts: Record<string, { role: any, name: string, openId: string }> = {
+        "yazar@aie.com": { role: "user", name: "Ahmet Yazar", openId: "mock-author-id" },
+        "hakem@aie.com": { role: "reviewer", name: "Mehmet Hakem", openId: "mock-reviewer-id" },
+        "baskan@aie.com": { role: "board_chair", name: "Ayşe Başkan", openId: "mock-chair-id" },
+        "admin@aie.com": { role: "admin", name: "Sistem Yöneticisi", openId: "mock-admin-id" }
+      };
+
+      if (demoAccounts[email] && password === "1234") {
+        const info = demoAccounts[email];
+        const mockUser = {
+          openId: info.openId,
+          name: info.name,
+          email,
+          loginMethod: "email_password",
+          role: info.role,
+          lastSignedIn: new Date(),
+        };
+
+        await db.upsertUser(mockUser);
+        const sessionToken = await sdk.createSessionToken(info.openId, { name: info.name, expiresInMs: ONE_YEAR_MS });
+        const cookieOptions = getSessionCookieOptions(req);
+        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return res.json({ success: true, user: mockUser });
+      }
+
+      // 2. Check Database for local users
+      const user = await db.getUserByEmail(email);
+      if (!user || user.password !== password) {
+        return res.status(401).json({ error: "Hatalı e-posta veya şifre." });
+      }
+
+      // Update last signed in
+      await db.upsertUser({
+        ...user,
+        lastSignedIn: new Date(),
+      });
+
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name || "Kullanıcı",
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      res.json({ success: true, user });
 
     } catch (error) {
       console.error("[Auth] Login failed:", error);
-      res.status(500).json({ error: "Login failed system error" });
+      res.status(500).json({ error: "Giriş işlemi sırasında sistem hatası oluştu." });
     }
   });
 

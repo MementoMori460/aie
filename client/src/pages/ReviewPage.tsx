@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Download } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
 export default function ReviewPage() {
@@ -53,9 +53,17 @@ export default function ReviewPage() {
                 Panel'e Dön
             </Button>
 
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Puanlama: {evaluation?.paperTitle}</h1>
-                <p className="text-muted-foreground">Makalenin boyutlarını 0-100 ölçeğinde değerlendirin.</p>
+            <div className="flex justify-between items-start mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold mb-2">Puanlama: {evaluation?.paperTitle}</h1>
+                    <p className="text-muted-foreground">Makalenin boyutlarını 0-100 ölçeğinde değerlendirin.</p>
+                </div>
+                {evaluation?.pdfPath && (
+                    <Button onClick={() => window.open(`/api/pdf/${evaluation.pdfPath}`, '_blank')} variant="outline" className="gap-2">
+                        <Download className="w-4 h-4" />
+                        Makaleyi Görüntüle
+                    </Button>
+                )}
             </div>
 
             <div className="space-y-6">
@@ -63,14 +71,21 @@ export default function ReviewPage() {
                 {[
                     { key: "D1", name: "Akademik Etki", desc: "Bilimsel topluluk üzerindeki etki" },
                     { key: "D2", name: "Toplumsal ve Pratik Etki", desc: "Toplum ve endüstri üzerindeki fayda" },
-                    { key: "D3", name: "Negatif Etki ve Risk", desc: "Potansiyel olumsuz sonuçlar (Yüksek = Kötü)" },
+                    { key: "D3", name: "Negatif Etki ve Risk", desc: "Potansiyel olumsuz sonuçlar (Yüksek Puan = Yüksek Risk = Düşük Genel Skor)" },
                     { key: "D4", name: "Etik ve Sorumluluk", desc: "Etik standartlara bağlılık" },
                 ].map((dim) => (
-                    <Card key={dim.key}>
+                    <Card key={dim.key} className={dim.key === 'D3' ? 'border-amber-200 bg-amber-50/30' : ''}>
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>{dim.name}</CardTitle>
+                                    <div className="flex items-center gap-2">
+                                        <CardTitle>{dim.name}</CardTitle>
+                                        {dim.key === 'D3' && (
+                                            <div className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                                                Ters Puan
+                                            </div>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-muted-foreground">{dim.desc}</p>
                                 </div>
                                 <div className="text-2xl font-bold text-primary">
@@ -84,7 +99,13 @@ export default function ReviewPage() {
                                 onValueChange={(val) => setScores({ ...scores, [dim.key]: val[0] })}
                                 max={100}
                                 step={1}
+                                className={dim.key === 'D3' ? ' [&>.relative>.absolute]:bg-amber-500' : ''}
                             />
+                            {dim.key === 'D3' && (
+                                <p className="text-xs text-amber-600 mt-2">
+                                    * Dikkat: Bu alana vereceğiniz puan, genel skoru düşürecektir. Risk yoksa 0 veriniz.
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 ))}
@@ -115,6 +136,6 @@ export default function ReviewPage() {
                     </Button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

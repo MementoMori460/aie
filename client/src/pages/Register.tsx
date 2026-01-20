@@ -6,35 +6,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-export default function Login() {
+export default function Register() {
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [, setLocation] = useLocation();
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            const response = await fetch("/api/auth/login", {
+            const response = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ name, email, password }),
             });
 
             if (!response.ok) {
-                throw new Error("Giriş başarısız oldu. Bilgilerinizi kontrol edin.");
+                const data = await response.json();
+                throw new Error(data.error || "Kayıt işlemi başarısız oldu.");
             }
 
             const data = await response.json();
+            toast.success(`Hoş geldiniz, ${data.user.name}. Kayıt başarıyla tamamlandı.`);
 
-            toast.success(`Hoş geldiniz, ${data.user.name}`);
-
-            // Redirect to home or dashboard
+            // Redirect to home
             window.location.href = "/";
         } catch (error: any) {
-            toast.error(error.message || "Giriş başarısız.");
+            toast.error(error.message || "Kayıt başarısız.");
         } finally {
             setIsLoading(false);
         }
@@ -44,14 +45,24 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="text-4xl mb-4">🔐</div>
-                    <CardTitle>Giriş Yap</CardTitle>
+                    <div className="text-4xl mb-4">📝</div>
+                    <CardTitle>Kayıt Ol</CardTitle>
                     <CardDescription>
-                        Akademik Etki Değerlendirme Sistemine devam etmek için giriş yapın.
+                        Akademik Etki Değerlendirme Sistemine katılmak için hesap oluşturun.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleLogin} className="space-y-4">
+                    <form onSubmit={handleRegister} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Ad Soyad</Label>
+                            <Input
+                                id="name"
+                                placeholder="Adınız Soyadınız"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">E-posta Adresi</Label>
                             <Input
@@ -68,32 +79,23 @@ export default function Login() {
                             <Input
                                 id="password"
                                 type="password"
+                                placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
                         </div>
 
-                        <div className="bg-muted/50 p-3 rounded-md text-xs text-muted-foreground space-y-1">
-                            <p className="font-semibold">Demo Hesapları (Şifre: 1234):</p>
-                            <ul className="grid grid-cols-2 gap-1">
-                                <li>• yazar@aie.com</li>
-                                <li>• hakem@aie.com</li>
-                                <li>• baskan@aie.com</li>
-                                <li>• admin@aie.com</li>
-                            </ul>
-                        </div>
-
                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+                            {isLoading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
                         </Button>
                     </form>
                 </CardContent>
                 <CardFooter className="justify-center border-t p-4">
                     <p className="text-sm text-muted-foreground">
-                        Hesabınız yok mu?{" "}
-                        <Link href="/register" className="text-primary hover:underline font-medium">
-                            Kayıt Olun
+                        Zaten hesabınız var mı?{" "}
+                        <Link href="/login" className="text-primary hover:underline font-medium">
+                            Giriş Yapın
                         </Link>
                     </p>
                 </CardFooter>

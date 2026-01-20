@@ -244,7 +244,7 @@ export default function Home() {
             </>
           )}
 
-          {user?.role === "reviewer" && (
+          {(user?.role === "reviewer" || user?.role === "admin") && (
             <Link href="/reviewer">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full border-primary/20">
                 <CardHeader>
@@ -258,7 +258,7 @@ export default function Home() {
             </Link>
           )}
 
-          {user?.role === "board_chair" && (
+          {(user?.role === "board_chair" || user?.role === "admin") && (
             <Link href="/consensus">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full border-primary/20">
                 <CardHeader>
@@ -273,7 +273,7 @@ export default function Home() {
           )}
 
           {user?.role === "admin" && (
-            <Link href="/evaluations">
+            <Link href="/admin">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full bg-slate-50 border-slate-200">
                 <CardHeader>
                   <div className="w-8 h-8 mb-2 text-primary text-3xl">🛠️</div>

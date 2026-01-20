@@ -71,10 +71,10 @@ export default function DimensionStep({ dimension, evaluationId, aiSuggestedValu
     setDimensionScore(dimScore);
 
     // Update evaluation with dimension score
-    const scoreField = `score${dimension.code}` as "scoreD1" | "scoreD2" | "scoreD3" | "scoreD4";
+    // Backend expects Input: { D1: number, ... }
     updateEvaluationMutation.mutate({
       id: evaluationId,
-      [scoreField]: dimScore.toFixed(2),
+      [dimension.code]: dimScore,
     });
   };
 
@@ -166,6 +166,7 @@ export default function DimensionStep({ dimension, evaluationId, aiSuggestedValu
                 indicator={indicator}
                 value={indicatorValues[indicator.code]?.raw}
                 onChange={(raw, normalized) => handleIndicatorChange(indicator.code, raw, normalized)}
+                aiScore={aiSuggestedValues?.[indicator.code]}
               />
             ))}
           </div>

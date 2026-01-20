@@ -4,28 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { storagePut } from "@/../../server/storage";
 
 interface PdfUploaderProps {
-  onMetadataExtracted: (metadata: {
-    paperTitle: string;
-    paperAuthors?: string;
-    paperDoi?: string;
-    paperYear?: number;
-    paperJournal?: string;
-    paperAbstract?: string;
-  }, fullText?: string) => void;
-  onAIAnalysisRequest?: (fullText: string, metadata: any) => void;
+  onUploadComplete: (filePath: string) => void;
 }
 
-export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
+export default function PdfUploader({ onUploadComplete }: PdfUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [extractionStatus, setExtractionStatus] = useState<"idle" | "uploading" | "extracting" | "success" | "error">("idle");
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
 
   const uploadMutation = trpc.pdf.upload.useMutation();
-  const extractMetadataMutation = trpc.pdf.extractMetadata.useMutation();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -67,10 +57,10 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
   const processFile = async (file: File) => {
     setUploadedFile(file);
     setIsUploading(true);
-    setExtractionStatus("uploading");
+    setUploadStatus("uploading");
 
     try {
-      // Convert to Base64 using FileReader to avoid stack overflow
+      // Convert to Base64 using FileReader
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -91,29 +81,15 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
         filename: file.name,
       });
 
-      setExtractionStatus("extracting");
-      toast.info("Makale bilgileri çıkarılıyor...");
+      setUploadStatus("success");
+      toast.success("PDF başarıyla yüklendi!");
 
-      // Extract metadata
-      const metadata = await extractMetadataMutation.mutateAsync({
-        localPath: uploadResult.localPath,
-      });
-
-      setExtractionStatus("success");
-      toast.success("Makale bilgileri başarıyla çıkarıldı!");
-
-      onMetadataExtracted({
-        paperTitle: metadata.title,
-        paperAuthors: metadata.authors,
-        paperDoi: metadata.doi,
-        paperYear: metadata.year,
-        paperJournal: metadata.journal,
-        paperAbstract: metadata.abstract,
-      }, metadata.fullText);
+      // Notify parent with the local file path
+      onUploadComplete(uploadResult.localPath);
 
     } catch (error) {
       console.error("File processing error:", error);
-      setExtractionStatus("error");
+      setUploadStatus("error");
       toast.error("Dosya yüklenirken hata oluştu");
     } finally {
       setIsUploading(false);
@@ -121,47 +97,44 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
   };
 
   const getStatusIcon = () => {
-    switch (extractionStatus) {
+    switch (uploadStatus) {
       case "uploading":
-      case "extracting":
         return <Loader2 className="w-5 h-5 animate-spin text-primary" />;
       case "success":
         return <CheckCircle2 className="w-5 h-5 text-green-600" />;
       case "error":
         return <AlertCircle className="w-5 h-5 text-red-600" />;
       default:
-        return <FileText className="w-5 h-5 text-muted-foreground" />;
+        return <Upload className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
   const getStatusText = () => {
-    switch (extractionStatus) {
+    switch (uploadStatus) {
       case "uploading":
         return "PDF yükleniyor...";
-      case "extracting":
-        return "Makale bilgileri çıkarılıyor...";
       case "success":
-        return "Başarıyla tamamlandı!";
+        return "PDF Yüklendi";
       case "error":
         return "Hata oluştu";
       default:
-        return "PDF dosyası yükleyin";
+        return "PDF Yükle";
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>PDF Yükle ve Otomatik Doldur</CardTitle>
+        <CardTitle>1. Adım: PDF Dosyası Yükle</CardTitle>
         <CardDescription>
-          Makale PDF'ini yükleyin, bilgiler otomatik olarak çıkarılsın
+          Değerlendirmek istediğiniz makale dosyasını yükleyin.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-primary/50"
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-primary/50"
             }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -172,7 +145,7 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
 
             <div>
               <p className="text-sm font-medium">{getStatusText()}</p>
-              {extractionStatus === "idle" && (
+              {uploadStatus === "idle" && (
                 <p className="text-xs text-muted-foreground mt-1">
                   PDF dosyasını buraya sürükleyin veya tıklayarak seçin
                 </p>
@@ -186,7 +159,7 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
               </div>
             )}
 
-            {extractionStatus === "idle" && (
+            {uploadStatus === "idle" && (
               <>
                 <input
                   type="file"
@@ -198,7 +171,6 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
                 <label htmlFor="pdf-upload">
                   <Button type="button" variant="outline" asChild>
                     <span>
-                      <Upload className="w-4 h-4 mr-2" />
                       Dosya Seç
                     </span>
                   </Button>
@@ -206,29 +178,35 @@ export default function PdfUploader({ onMetadataExtracted }: PdfUploaderProps) {
               </>
             )}
 
-            {extractionStatus === "error" && (
+            {uploadStatus === "error" && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setExtractionStatus("idle");
+                  setUploadStatus("idle");
                   setUploadedFile(null);
                 }}
               >
                 Tekrar Dene
               </Button>
             )}
+
+            {uploadStatus === "success" && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={() => {
+                  setUploadStatus("idle");
+                  setUploadedFile(null);
+                }}
+              >
+                Farklı dosya yükle
+              </Button>
+            )}
           </div>
         </div>
-
-        {extractionStatus === "success" && (
-          <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-            <p className="text-sm text-green-800 dark:text-green-200">
-              ✓ Makale bilgileri başarıyla çıkarıldı ve form alanları dolduruldu.
-              Lütfen bilgileri kontrol edin ve gerekirse düzeltin.
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
