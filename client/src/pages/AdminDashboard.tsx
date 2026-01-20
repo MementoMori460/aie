@@ -69,6 +69,7 @@ export default function AdminDashboard() {
                     <PromptTab />
                 </TabsContent>
             </Tabs>
+            <AdminFooter />
         </div>
     );
 }
@@ -826,4 +827,18 @@ function RoleBadge({ role }: { role: string }) {
         case "reviewer": return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Hakem</Badge>;
         default: return <Badge variant="outline">Kullanıcı</Badge>;
     }
+}
+
+function AdminFooter() {
+    const { data, isLoading, error } = trpc.system.version.useQuery();
+
+    if (isLoading) return <div className="mt-8 pt-4 border-t text-center text-xs text-muted-foreground animate-pulse">Loading version...</div>;
+    if (error) return <div className="mt-8 pt-4 border-t text-center text-xs text-red-500">Version Error: {error.message}</div>;
+    if (!data) return <div className="mt-8 pt-4 border-t text-center text-xs text-amber-500">Version: No Data</div>;
+
+    return (
+        <div className="mt-8 pt-4 border-t text-center text-xs text-muted-foreground font-mono">
+            System Version: <span className="font-semibold text-primary">{data.version}</span>
+        </div>
+    );
 }
