@@ -24,7 +24,13 @@ echo "🏗️  Building project..."
 npm run build
 
 echo "🔄 Restarting server..."
-pm2 restart all || true
+echo "🔄 Restarting server..."
+# Try to source bashrc to make sure we have the right PATH (including pm2)
+[ -f ~/.bashrc ] && source ~/.bashrc
+
+# Restart specific app if name is known, otherwise all
+# Note: In aaPanel, project name is often the folder name or domain
+pm2 restart all || echo "⚠️ PM2 restart failed. If you use aaPanel Node Manager, it might manage the process differently."
 
 echo "✅ Deployment preparation complete!"
 echo "👉 Now go to aaPanel Node Manager and click 'Restart' on your project."
