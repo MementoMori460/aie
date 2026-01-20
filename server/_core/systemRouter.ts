@@ -26,4 +26,18 @@ export const systemRouter = router({
         success: delivered,
       } as const;
     }),
+
+  version: publicProcedure.query(async () => {
+    try {
+      const { exec } = await import("child_process");
+      const { promisify } = await import("util");
+      const execAsync = promisify(exec);
+      // Run git command to get short hash
+      const { stdout } = await execAsync("git rev-parse --short HEAD", { cwd: process.cwd() });
+      return { version: stdout.trim() };
+    } catch (e) {
+      console.error("Failed to get git version", e);
+      return { version: "unknown" };
+    }
+  }),
 });
