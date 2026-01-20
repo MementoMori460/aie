@@ -26,15 +26,8 @@
     {
       "idx": 3,
       "version": "6",
-      "when": 1768869526542,
-      "tag": "0003_whole_lockjaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1768869911907,
-      "tag": "0004_rare_skin",
+      "when": 1768871692056,
+      "tag": "0003_shocking_albert_cleary",
       "breakpoints": true
     }
   ]
