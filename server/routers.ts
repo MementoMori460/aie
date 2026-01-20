@@ -551,6 +551,9 @@ export const appRouter = router({
         });
 
         if (input.status === "submitted") {
+          // Update reviewer assignment status to completed
+          await db.updateReviewerAssignmentStatusByIds(input.evaluationId, input.reviewerId, "completed");
+
           const notifyReview = await db.getSystemSetting("notify_on_review_submission");
           if (notifyReview === "true") {
             const users = await db.getAllUsers();

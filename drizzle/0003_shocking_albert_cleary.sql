@@ -133,7 +133,7 @@ CREATE TABLE `__new_users` (
 	`expertise` text
 );
 --> statement-breakpoint
-INSERT INTO `__new_users`("id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "isBlocked", "expertise") SELECT "id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "0" as "isBlocked", NULL as "expertise" FROM `users`;--> statement-breakpoint
+INSERT INTO `__new_users`("id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "isBlocked", "expertise") SELECT "id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", 0 as "isBlocked", NULL as "expertise" FROM `users`;--> statement-breakpoint
 DROP TABLE `users`;--> statement-breakpoint
 ALTER TABLE `__new_users` RENAME TO `users`;--> statement-breakpoint
 CREATE UNIQUE INDEX `users_openId_unique` ON `users` (`openId`);

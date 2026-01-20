@@ -233,6 +233,18 @@ export async function updateReviewerAssignmentStatus(id: number, status: "assign
     .where(eq(reviewerAssignments.id, id));
 }
 
+export async function updateReviewerAssignmentStatusByIds(evaluationId: number, reviewerId: number, status: "assigned" | "in_progress" | "completed") {
+  await db
+    .update(reviewerAssignments)
+    .set({ status, completedAt: status === "completed" ? new Date() : null })
+    .where(
+      and(
+        eq(reviewerAssignments.evaluationId, evaluationId),
+        eq(reviewerAssignments.reviewerId, reviewerId)
+      )
+    );
+}
+
 // Review queries
 
 export async function saveReview(data: InsertReview) {
