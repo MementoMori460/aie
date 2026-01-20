@@ -35,6 +35,12 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Debug logging
+  app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.originalUrl}`);
+    next();
+  });
+
   // Serve uploads directory - ADDED THIS
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
