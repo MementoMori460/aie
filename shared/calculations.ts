@@ -140,7 +140,16 @@ export function parseDate(val: any): Date {
     if (!isNaN(Number(val))) return parseDate(Number(val));
     return new Date(val);
   }
-  return new Date(val);
+  const date = new Date(val);
+
+  // FIX: Defensive programming for "Year 58023" bug
+  // If the date is very far in the future (> year 10000), it implies a double-multiplication of milliseconds (ms * 1000)
+  // 58023 corresponds to roughly 1.76e15, which is current_ms * 1000.
+  if (date.getFullYear() > 10000) {
+    return new Date(date.getTime() / 1000);
+  }
+
+  return date;
 }
 
 /**
