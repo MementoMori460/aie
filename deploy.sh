@@ -8,6 +8,8 @@ echo "🚀 Starting deployment..."
 echo "⬇️  Pulling latest changes..."
 # Discard local lockfile changes to avoid merge conflicts
 # Discard local lockfile changes to avoid merge conflicts
+# Discard local lockfile changes to avoid merge conflicts
+git config --global --add safe.directory /www/wwwroot/aie
 git reset --hard HEAD
 git clean -fd
 git pull
