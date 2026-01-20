@@ -73,7 +73,7 @@ CREATE TABLE `__new_evaluations` (
 	`updatedAt` integer NOT NULL
 );
 --> statement-breakpoint
-INSERT INTO `__new_evaluations`("id", "userId", "paperTitle", "paperAuthors", "paperDoi", "paperYear", "paperJournal", "paperAbstract", "pdfPath", "boardChairId", "evaluationMode", "scoreD1", "scoreD2", "scoreD3", "scoreD4", "scoreHIS", "scoreD5", "scoreD6", "scoreD7", "scoreD8", "scoreD9", "scoreD10", "scoreD11", "scoreD12", "scoreD13", "scoreD14", "scoreD15", "scoreD16", "cascadeMultiplier", "economicMultiplier", "socialMultiplier", "networkEffectScore", "status", "completedAt", "createdAt", "updatedAt") SELECT "id", "userId", "paperTitle", "paperAuthors", "paperDoi", "paperYear", "paperJournal", "paperAbstract", "pdfPath", "boardChairId", "evaluationMode", "scoreD1", "scoreD2", "scoreD3", "scoreD4", "scoreHIS", "scoreD5", "scoreD6", "scoreD7", "scoreD8", "scoreD9", "scoreD10", "scoreD11", "scoreD12", "scoreD13", "scoreD14", "scoreD15", "scoreD16", "cascadeMultiplier", "economicMultiplier", "socialMultiplier", "networkEffectScore", "status", "completedAt", "createdAt", "updatedAt" FROM `evaluations`;--> statement-breakpoint
+INSERT INTO `__new_evaluations`("id", "userId", "paperTitle", "paperAuthors", "paperDoi", "paperYear", "paperJournal", "paperAbstract", "pdfPath", "boardChairId", "evaluationMode", "scoreD1", "scoreD2", "scoreD3", "scoreD4", "scoreHIS", "scoreD5", "scoreD6", "scoreD7", "scoreD8", "scoreD9", "scoreD10", "scoreD11", "scoreD12", "scoreD13", "scoreD14", "scoreD15", "scoreD16", "cascadeMultiplier", "economicMultiplier", "socialMultiplier", "networkEffectScore", "status", "completedAt", "createdAt", "updatedAt") SELECT "id", "userId", "paperTitle", "paperAuthors", "paperDoi", "paperYear", "paperJournal", "paperAbstract", NULL as "pdfPath", NULL as "boardChairId", "evaluationMode", "scoreD1", "scoreD2", "scoreD3", "scoreD4", "scoreHIS", "scoreD5", "scoreD6", "scoreD7", "scoreD8", "scoreD9", "scoreD10", "scoreD11", "scoreD12", "scoreD13", "scoreD14", "scoreD15", "scoreD16", "cascadeMultiplier", "economicMultiplier", "socialMultiplier", "networkEffectScore", "status", "completedAt", "createdAt", "updatedAt" FROM `evaluations`;--> statement-breakpoint
 DROP TABLE `evaluations`;--> statement-breakpoint
 ALTER TABLE `__new_evaluations` RENAME TO `evaluations`;--> statement-breakpoint
 CREATE TABLE `__new_reviewerAssignments` (
@@ -133,7 +133,7 @@ CREATE TABLE `__new_users` (
 	`expertise` text
 );
 --> statement-breakpoint
-INSERT INTO `__new_users`("id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "isBlocked", "expertise") SELECT "id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "isBlocked", "expertise" FROM `users`;--> statement-breakpoint
+INSERT INTO `__new_users`("id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "isBlocked", "expertise") SELECT "id", "openId", "name", "email", "password", "loginMethod", "role", "createdAt", "updatedAt", "lastSignedIn", "0" as "isBlocked", NULL as "expertise" FROM `users`;--> statement-breakpoint
 DROP TABLE `users`;--> statement-breakpoint
 ALTER TABLE `__new_users` RENAME TO `users`;--> statement-breakpoint
 CREATE UNIQUE INDEX `users_openId_unique` ON `users` (`openId`);
