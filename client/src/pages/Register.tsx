@@ -24,12 +24,18 @@ export default function Register() {
                 body: JSON.stringify({ name, email, password }),
             });
 
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Kayıt işlemi başarısız oldu.");
+            const responseText = await response.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error("Non-JSON response:", responseText);
+                throw new Error(`Sunucu hatası: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Kayıt işlemi başarısız oldu.");
+            }
             toast.success(`Hoş geldiniz, ${data.user.name}. Kayıt başarıyla tamamlandı.`);
 
             // Redirect to home

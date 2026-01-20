@@ -123,7 +123,9 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.json({ success: true, user: { ...newUser, id: insertedId } });
+      // Ensure id is not a BigInt before serialization
+      const safeId = typeof insertedId === 'bigint' ? Number(insertedId) : insertedId;
+      res.json({ success: true, user: { ...newUser, id: safeId } });
     } catch (error) {
       console.error("[Auth] Registration failed:", error);
       res.status(500).json({ error: "Kayıt sırasında bir hata oluştu." });
