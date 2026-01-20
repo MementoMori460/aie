@@ -136,6 +136,7 @@ export function registerOAuthRoutes(app: Express) {
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
+      console.log(`[Auth] Login attempt for: ${email}`);
 
       if (!email || !password) {
         return res.status(400).json({ error: "E-posta ve şifre gereklidir." });
@@ -187,7 +188,13 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.json({ success: true, user });
+      const safeUser = {
+        ...user,
+        id: typeof user.id === 'bigint' ? Number(user.id) : user.id
+      };
+
+      console.log(`[Auth] Login successful for ${email}, id: ${safeUser.id}`);
+      res.json({ success: true, user: safeUser });
 
     } catch (error) {
       console.error("[Auth] Login failed:", error);
