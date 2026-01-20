@@ -189,6 +189,27 @@ export const appRouter = router({
         // No dimension scores provided, just update other fields
         await db.updateEvaluation(id, data);
 
+        // Notify Board Chair if assigned
+        if (data.boardChairId) {
+          try {
+            const boardChair = await db.getUserById(data.boardChairId);
+            if (boardChair && boardChair.email) {
+              await sendEmail({
+                to: boardChair.email,
+                subject: "Yeni Değerlendirme Ataması (Başhakem)",
+                html: `
+                  <h2>Yeni Başhakem Ataması</h2>
+                  <p><strong>${input.paperTitle || 'Bir makale'}</strong> için Başhakem olarak atandınız.</p>
+                  <p>Uzlaşma Panelini kullanarak hakem atamalarını gerçekleştirebilirsiniz.</p>
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/consensus">Panele Git</a>
+                `
+              });
+            }
+          } catch (e) {
+            console.error("Error sending board chair email:", e);
+          }
+        }
+
         if (data.status === "completed") {
           // Check notification setting
           const notifyCompletion = await db.getSystemSetting("notify_on_completion");
