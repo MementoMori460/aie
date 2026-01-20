@@ -7,7 +7,9 @@ echo "🚀 Starting deployment..."
 
 echo "⬇️  Pulling latest changes..."
 # Discard local lockfile changes to avoid merge conflicts
-git checkout package-lock.json yarn.lock 2>/dev/null || true
+# Discard local lockfile changes to avoid merge conflicts
+git reset --hard HEAD
+git clean -fd
 git pull
 
 echo "📦 Installing dependencies..."
