@@ -538,6 +538,32 @@ function SettingsTab() {
                         </p>
                     </div>
 
+                    <div className="grid gap-2 pt-4 border-t">
+                        <h3 className="text-lg font-semibold">AI Analiz Ayarları</h3>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="ai_analysis_max_chars">Analiz Karakter Sınırı</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="ai_analysis_max_chars"
+                                        type="number"
+                                        placeholder="15000"
+                                        value={getKey("ai_analysis_max_chars")}
+                                        onChange={(e) => setLocalKeys(prev => ({ ...prev, "ai_analysis_max_chars": e.target.value }))}
+                                    />
+                                    <Button onClick={() => handleSave("ai_analysis_max_chars", "Max characters for AI analysis")}>
+                                        <Save className="w-4 h-4 mr-2" />
+                                        Kaydet
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    AI modeline gönderilecek makale metninin maksimum karakter sayısı. (Varsayılan: 15000)
+                                    Daha yüksek değerler daha fazla token harcar ancak daha kapsamlı analiz sağlar.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="border-t pt-6">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold">SMTP E-posta Ayarları</h3>

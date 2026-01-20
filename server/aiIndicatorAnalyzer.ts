@@ -47,6 +47,11 @@ export async function analyzeIndicatorsWithAI(
   const activePromptRecord = await getActiveAiPrompt();
   let promptTemplate = activePromptRecord ? activePromptRecord.promptText : generatePromptTemplate();
 
+  // Get max chars setting
+  const { getSystemSetting } = await import("./db");
+  const maxCharsSetting = await getSystemSetting("ai_analysis_max_chars");
+  const maxChars = maxCharsSetting ? parseInt(maxCharsSetting) : 15000;
+
   // Replace placeholders
   const filledPrompt = promptTemplate
     .replace(/{MAKELE_BAŞLIĞI}|{MAKALE_BAŞLIĞI}/g, paperMetadata.title) // Handle potential typo in template
@@ -54,7 +59,7 @@ export async function analyzeIndicatorsWithAI(
     .replace(/{YIL}/g, (paperMetadata.year || "").toString())
     .replace(/{DERGİ}/g, paperMetadata.journal || "Belirtilmemiş")
     .replace(/{ÖZET}/g, paperMetadata.abstract || "")
-    .replace(/{MAKALE_METNİ_BURAYA_GELECEK}/g, paperText.substring(0, 15000)); // Increased limit
+    .replace(/{MAKALE_METNİ_BURAYA_GELECEK}/g, paperText.substring(0, maxChars));
 
   // If using the default template which has the indicators section dynamically generated at the end, 
   // we might need to handle that. 
